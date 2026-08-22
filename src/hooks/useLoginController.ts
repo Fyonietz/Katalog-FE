@@ -1,6 +1,6 @@
 // hooks/useLoginController.ts
 import { useState, type FormEvent } from "react";
-import { loginWithPassword, redirectToGoogleLogin } from "../services/authService";
+import { loginWithPassword, loginWithGoogle } from "../services/authService";
 
 export function useLoginController() {
   const [email, setEmail] = useState<string>("");
@@ -23,9 +23,16 @@ export function useLoginController() {
     }
   }
 
-  function handleGoogleLogin(): void {
-    redirectToGoogleLogin();
-  }
+function handleGoogleLogin(idToken: string): void {
+  setLoading(true);
+  loginWithGoogle(idToken)
+    .then((result) => {
+      localStorage.setItem("accessToken", result.token);
+      // TODO: redirect ke dashboard
+    })
+    .catch(() => setError("Login Google gagal."))
+    .finally(() => setLoading(false));
+}
 
   return {
     email, setEmail,

@@ -10,4 +10,8 @@ export default defineConfig({
     babel({ presets: [reactCompilerPreset()] }),
     tailwindcss()
   ],
+  server: {
+    host: true, // supaya bisa diakses dari network, bukan cuma localhost
+    allowedHosts: ["192.168.69.50.nip.io"],
+  },
 })

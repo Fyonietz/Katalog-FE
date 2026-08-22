@@ -1,4 +1,3 @@
-// services/authService.ts
 import axios from "axios";
 import type { AuthResult } from "../models/AuthModel";
 
@@ -11,12 +10,13 @@ export async function loginWithPassword(
   email: string,
   password: string
 ): Promise<AuthResult> {
-  const { data } = await api.post<AuthResult>("/auth/login", { email, password });
+  const { data } = await api.post<AuthResult>("/api/v1/auth/login", { email, password });
   return data;
 }
 
-export function redirectToGoogleLogin(): void {
-  window.location.href = `${import.meta.env.VITE_API_BASE_URL}/auth/google/login`;
+export async function loginWithGoogle(idToken: string): Promise<AuthResult> {
+  const { data } = await api.post<AuthResult>("/api/v1/auth/google", { idToken });
+  return data;
 }
 
 export default api;

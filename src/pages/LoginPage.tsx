@@ -1,15 +1,20 @@
-// pages/LoginPage.tsx
+import {useNavigate,useLocation} from "react-router-dom"
 import { useLoginController } from "../hooks/useLoginController";
+import { GoogleLogin } from "@react-oauth/google";
+import { loginWithGoogle } from "../services/authService";
 
 export default function LoginPage() {
   const {
     email, setEmail,
     password, setPassword,
     loading, error,
-    handleSubmit, handleGoogleLogin,
+    handleSubmit,
   } = useLoginController();
 
-  return (
+   const navigate = useNavigate();
+    const location = useLocation();
+    const redirectTo = (location.state as { redirectTo?: string })?.redirectTo ?? "/shopping";
+return (
     <div className="min-h-screen flex bg-[#F4F6FB]">
 
       {/* Panel kiri - brand, sembunyi di mobile */}
@@ -54,7 +59,7 @@ export default function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="nama@perusahaan.com"
+                placeholder="johndoe@email.com"
                 className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
                            focus:outline-none focus:ring-2 focus:ring-[#2E9DF7] focus:border-[#2E9DF7]"
               />
@@ -89,20 +94,28 @@ export default function LoginPage() {
             <div className="h-px flex-1 bg-gray-200" />
           </div>
 
-          <button
-            type="button"
-            onClick={handleGoogleLogin}
-            className="mt-6 w-full flex items-center justify-center gap-2 rounded-lg border border-gray-300
-                       py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 48 48">
-              <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.1 8.1 3l5.7-5.7C34.5 6.1 29.5 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-3.5z"/>
-              <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.9 18.9 13 24 13c3.1 0 5.9 1.1 8.1 3l5.7-5.7C34.5 6.1 29.5 4 24 4c-7.4 0-13.7 4.2-16.9 10.4l-.8.3z"/>
-              <path fill="#4CAF50" d="M24 44c5.4 0 10.3-2.1 13.9-5.5l-6.4-5.4c-2 1.4-4.6 2.3-7.5 2.3-5.2 0-9.7-3.3-11.3-8l-6.6 5.1C9.9 39.6 16.4 44 24 44z"/>
-              <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.2 4.2-4.1 5.7l6.4 5.4C40.7 36.4 44 30.7 44 24c0-1.3-.1-2.7-.4-3.5z"/>
-            </svg>
-            Masuk dengan Google
-          </button>
+          <div className="mt-6 flex justify-center">
+            <GoogleLogin
+              onSuccess={async (credentialResponse) => {
+                if (!credentialResponse.credential) return;
+
+                try {
+                  const result = await loginWithGoogle(credentialResponse.credential);
+                  localStorage.setItem("accessToken", result.token);
+                  navigate(redirectTo,{replace : true})
+                } catch {
+                  // TODO: tampilkan error, sesuaikan pola error state kamu
+                }
+              }}
+              onError={() => {
+                console.error("Google login gagal di sisi client");
+              }}
+              theme="outline"
+              shape="pill"
+              text="signin_with"
+              width="320"
+            />
+          </div>
         </div>
       </div>
     </div>
