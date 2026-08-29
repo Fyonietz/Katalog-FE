@@ -1,43 +1,44 @@
 // hooks/useLandingController.ts
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import type { Kategori, Produk } from "../models/Produk";
+import { useState, useEffect } from "react";
+import type { Produk } from "../models/Produk";
 import { getProdukList } from "../services/produkService";
-import { getKategoriList } from "../services/kategoriService";
 
 export function useLandingController() {
-  const [kategoriList, setKategoriList] = useState<Kategori[]>([]);
   const [produkList, setProdukList] = useState<Produk[]>([]);
-  const [activeKategoriId, setActiveKategoriId] = useState<string>("");
-  const [loading, setLoading] = useState<boolean>(true);
-  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [activeKategoriId, setActiveKategoriId] = useState<string | number>("semua");
 
   useEffect(() => {
-    Promise.all([getKategoriList(), getProdukList()])
-      .then(([kategori, produk]) => {
-        setKategoriList(kategori);
-        setProdukList(produk);
-        if (kategori.length > 0) setActiveKategoriId(kategori[0].id); // default: kategori pertama dari backend
-      })
-      .finally(() => setLoading(false));
+    async function fetchProduk() {
+      try {
+        setLoading(true);
+        const data = await getProdukList();
+        setProdukList(data);
+      } catch (err) {
+        console.error("Gagal fetch produk:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchProduk();
   }, []);
 
-  const produkTerfilter = useMemo(
-    () => produkList.filter((p) => p.kategoriId === activeKategoriId),
-    [produkList, activeKategoriId]
-  );
+  // Kategori List (Bisa statis atau dinamis dari API)
+  const kategoriList = [
+    { id: "semua", nama: "Semua Produk" },
+    { id: 2, nama: "Percetakan" }, // Sesuaikan ID dengan ID Kategori dari Backend Anda (misal ID 2)
+  ];
 
-  function isLoggedIn(): boolean {
-    return Boolean(localStorage.getItem("accessToken"));
-  }
+  // LOGIKA FILTER YANG AMAN (Konversi ke String agar '2' === 2 bernilai true)
+  const produkTerfilter = produkList.filter((item) => {
+    if (activeKategoriId === "semua" || !activeKategoriId) return true;
+    return item.idKategoriProduct?.toString() === activeKategoriId.toString();
+  });
 
-  function handleBeli(produk: Produk) {
-    if (!isLoggedIn()) {
-      navigate("/login", { state: { redirectTo: "/shopping" } });
-      return;
-    }
-    navigate("/shopping");
-  }
+  const handleBeli = (produk: Produk) => {
+    console.log("Membeli produk:", produk);
+    // Logika redirect ke login atau keranjang
+  };
 
   return {
     kategoriList,

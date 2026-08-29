@@ -1,10 +1,13 @@
 // pages/LandingPage.tsx
+import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useLandingController } from "../hooks/useLandingController";
 import ProductCard from "../components/ProductCard";
 import Navbar from "../components/Navbar";
 import AnimatedCounter from "../components/AnimatedCounter";
 import PrinterAnimation from "../components/PrinterAnimation";
+import ProductModal from "../components/ProductModal";
+import type { Produk } from "../models/Produk";
 
 export default function LandingPage() {
   const {
@@ -16,18 +19,27 @@ export default function LandingPage() {
     handleBeli,
   } = useLandingController();
 
+  // State untuk modal detail produk
+  const [selectedProduk, setSelectedProduk] = useState<Produk | null>(null);
+  const [modalQty, setModalQty] = useState(1);
+
   function scrollTo(id: string) {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
   }
 
+  const handleCardClick = (produk: Produk) => {
+    setSelectedProduk(produk);
+    setModalQty(1);
+  };
+
   return (
-  <div className="min-h-screen bg-[#F4F6FB]">
+    <div className="min-h-screen bg-[#F4F6FB]">
       <Navbar />
 
       {/* ===== HERO ===== */}
       <section
         id="beranda"
-  className="relative flex items-center bg-[#1B2A6B] text-white overflow-hidden px-6 min-h-screen"
+        className="relative flex items-center bg-[#1B2A6B] text-white overflow-hidden px-6 min-h-screen"
       >
         <motion.div
           animate={{ rotate: [45, 55, 45], scale: [1, 1.05, 1] }}
@@ -46,12 +58,11 @@ export default function LandingPage() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
-              className="text-sm tracking-widest text-[#8FC2FA] font-semibold"
+              className="text-sm tracking-widest text-[#8FC2FA] font-semibold uppercase"
             >
               PRINTING EXPERT NOMOR 1 DI PEKANBARU
             </motion.p>
 
-            {/* Judul dengan efek "tersapu" ala print head */}
             <motion.h1
               initial={{ clipPath: "inset(0 100% 0 0)" }}
               animate={{ clipPath: "inset(0 0% 0 0)" }}
@@ -76,14 +87,13 @@ export default function LandingPage() {
               transition={{ duration: 0.5, delay: 1.3 }}
               whileHover={{ scale: 1.04 }}
               whileTap={{ scale: 0.97 }}
-              onClick={() => scrollTo("produk")}
+              onClick={() => scrollTo("produk")} // Sekarang akan scrol tepat ke katalog produk
               className="mt-8 rounded-full bg-[#2E9DF7] px-8 py-3 font-semibold text-white shadow-lg shadow-[#2E9DF7]/30"
             >
               Lihat Katalog
             </motion.button>
           </div>
 
-          {/* Ilustrasi printer mencetak */}
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -94,9 +104,9 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ===== TENTANG ===== */}
-<section id="produk" className="min-h-screen flex flex-col justify-center px-6 py-24 max-w-7xl mx-auto w-full">
-      <div className="flex w-full md:px-2">
+      {/* ===== TENTANG (DIUBAH ID MENJADI "tentang") ===== */}
+      <section id="tentang" className="min-h-screen flex flex-col justify-center px-6 py-24 max-w-7xl mx-auto w-full">
+        <div className="flex flex-col w-full md:px-2">
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -141,14 +151,14 @@ export default function LandingPage() {
           Pilih kategori, lalu klik Beli — kamu akan diminta masuk terlebih dahulu.
         </p>
 
-        <div className="mt-6 flex gap-2 overflow-x-auto pb-1">
+        <div className="mt-6 flex gap-2 overflow-x-auto pb-1 no-scrollbar">
           {kategoriList.map((kategori) => (
             <button
               key={kategori.id}
               onClick={() => setActiveKategoriId(kategori.id)}
               className="relative px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors"
             >
-              <span className={activeKategoriId === kategori.id ? "text-[#1B2A6B]" : "text-gray-500"}>
+              <span className={activeKategoriId === kategori.id ? "text-[#1B2A6B] font-bold" : "text-gray-500"}>
                 {kategori.nama}
               </span>
               {activeKategoriId === kategori.id && (
@@ -164,12 +174,19 @@ export default function LandingPage() {
 
         <div className="mt-6">
           {loading ? (
-            <p className="text-sm text-gray-400">Memuat produk...</p>
+            <div className="flex justify-center py-16">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#1B2A6B]"></div>
+            </div>
           ) : (
-            <motion.div layout className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+            <motion.div 
+              layout 
+              className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-5"
+            >
               <AnimatePresence mode="popLayout">
                 {produkTerfilter.map((produk) => (
-                  <ProductCard key={produk.id} produk={produk} onBeli={handleBeli} />
+                  <div key={produk.id} onClick={() => handleCardClick(produk)} className="cursor-pointer">
+                    <ProductCard produk={produk} onBeli={() => handleBeli(produk)} />
+                  </div>
                 ))}
               </AnimatePresence>
             </motion.div>
@@ -178,7 +195,7 @@ export default function LandingPage() {
       </section>
 
       {/* ===== KONTAK ===== */}
-<section id="kontak" className="min-h-screen flex items-center bg-[#1B2A6B] text-white px-6">
+      <section id="kontak" className="min-h-screen flex items-center bg-[#1B2A6B] text-white px-6">
         <div className="max-w-3xl mx-auto text-center w-full">
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
@@ -220,6 +237,18 @@ export default function LandingPage() {
           </motion.div>
         </div>
       </section>
+
+      {/* Modal Produk Ala Discord */}
+      <ProductModal
+        produk={selectedProduk}
+        isOpen={selectedProduk !== null}
+        onClose={() => setSelectedProduk(null)}
+        qty={modalQty}
+        onQtyChange={setModalQty}
+        onAddToCart={() => {
+          if (selectedProduk) handleBeli(selectedProduk);
+        }}
+      />
     </div>
   );
 }

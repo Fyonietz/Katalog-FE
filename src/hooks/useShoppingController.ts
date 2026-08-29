@@ -31,13 +31,22 @@ export function useShoppingController() {
     setCart(getCart());
   }, []);
 
-  const produkTerfilter = useMemo(() => {
-    return produkList.filter((p) => {
-      const cocokKategori = p.kategoriId === activeKategoriId;
-      const cocokSearch = p.nama.toLowerCase().includes(search.toLowerCase());
-      return cocokKategori && cocokSearch;
-    });
-  }, [produkList, activeKategoriId, search]);
+// Contoh logika filter yang aman di dalam useShoppingController.ts
+const produkTerfilter = produkList.filter((item) => {
+  // 1. Filter Berdasarkan Kategori
+  const matchKategori = 
+    activeKategoriId === "semua" || 
+    !activeKategoriId || 
+    item.idKategoriProduct.toString() === activeKategoriId.toString();
+
+  // 2. Filter Berdasarkan Search Bar
+  const matchSearch = 
+    !search || 
+    item.nama.toLowerCase().includes(search.toLowerCase()) ||
+    item.deskripsi.toLowerCase().includes(search.toLowerCase());
+
+  return matchKategori && matchSearch;
+});
 
   const cartTotal = useMemo(() => getCartTotal(cart), [cart]);
   const cartCount = useMemo(() => cart.reduce((n, item) => n + item.qty, 0), [cart]);

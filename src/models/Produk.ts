@@ -1,15 +1,24 @@
 // models/Produk.ts
-
 export interface Kategori {
-  id: string;
+  id: number;
+  nama: string;
+}
+
+export interface StatusProduct {
+  id: number;
   nama: string;
 }
 
 export interface Produk {
-  id: string;
+  id: number;
+  idKategoriProduct: number;
+  idStatusProduct: number;
   nama: string;
-  kategoriId: string; // relasi ke Kategori.id
-  hargaMulai: number;
-  satuan: string;
-  gambar: string;
+  deskripsi: string;
+  imagePath: string; // Path gambar dari API
+  harga: number;     // Menggantikan hargaMulai
+  diskon: number;
+  backgroundColor: string;
+  kategoryProduct: Kategori;
+  statusProduct: StatusProduct;
 }

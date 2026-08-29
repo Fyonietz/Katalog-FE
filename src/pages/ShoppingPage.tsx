@@ -141,27 +141,28 @@ export default function ShoppingPage() {
               <p className="text-lg text-gray-400 font-medium">Ups, produk tidak ditemukan.</p>
             </div>
           ) : (
-            <motion.div 
-              key={activeKategoriId}
-              variants={containerVariants}
-              initial="hidden"
-              animate="show"
-              exit="exit"
-              className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 md:gap-5"
-            >
-              <AnimatePresence mode="popLayout">
-                {produkTerfilter.map((produk) => (
-                  <ShoppingProductCard
-                    key={produk.id}
-                    produk={produk}
-                    qty={getQty(produk.id)}
-                    onQtyChange={(qty) => setQty(produk.id, qty)}
-                    onAddToCart={() => handleAddToCart(produk)}
-                    onClickCard={() => setSelectedProduk(produk)}
-                  />
-                ))}
-              </AnimatePresence>
-            </motion.div>
+<motion.div 
+            key={activeKategoriId}
+            variants={containerVariants}
+            initial="hidden"
+            animate="show"
+            exit="exit"
+            /* UBAH DI SINI: Auto fill dengan batas minimal 220px per card */
+            className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4 md:gap-5"
+          >
+            <AnimatePresence mode="popLayout">
+              {produkTerfilter.map((produk) => (
+                <ShoppingProductCard
+                  key={produk.id}
+                  produk={produk}
+                  qty={getQty(produk.id.toString())}
+                  onQtyChange={(qty) => setQty(produk.id.toString(), qty)}
+                  onAddToCart={() => handleAddToCart(produk)}
+                  onClickCard={() => setSelectedProduk(produk)}
+                />
+              ))}
+            </AnimatePresence>
+          </motion.div>
           )}
         </main>
       </div>

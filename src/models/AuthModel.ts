@@ -5,14 +5,11 @@ export interface LoginRequest {
   password: string;
 }
 
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-}
+export type Role = "Admin" | "Pelanggan";
 
 export interface AuthResult {
-  accessToken: string;
+  token: string;
+  role: Role;
+  nama: string;
   refreshToken: string;
-  user: User;
 }

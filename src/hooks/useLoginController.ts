@@ -1,6 +1,7 @@
 // hooks/useLoginController.ts
 import { useState, type FormEvent } from "react";
-import { loginWithPassword, loginWithGoogle } from "../services/authService";
+import { useLocation, useNavigate } from "react-router-dom";
+import { loginWithPassword, getRedirectPathByRole } from "../services/authService";
 
 export function useLoginController() {
   const [email, setEmail] = useState<string>("");
@@ -8,14 +9,18 @@ export function useLoginController() {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  const navigate = useNavigate();
+  const location = useLocation();
+  const redirectTo = (location.state as { redirectTo?: string })?.redirectTo;
+
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
     setError(null);
     try {
       const result = await loginWithPassword(email, password);
-      localStorage.setItem("accessToken", result.accessToken);
-      // TODO: redirect ke dashboard
+      localStorage.setItem("accessToken", result.token);
+      navigate(getRedirectPathByRole(result.role, redirectTo), { replace: true });
     } catch (err) {
       setError("Email atau password salah.");
     } finally {
@@ -23,21 +28,5 @@ export function useLoginController() {
     }
   }
 
-function handleGoogleLogin(idToken: string): void {
-  setLoading(true);
-  loginWithGoogle(idToken)
-    .then((result) => {
-      localStorage.setItem("accessToken", result.token);
-      // TODO: redirect ke dashboard
-    })
-    .catch(() => setError("Login Google gagal."))
-    .finally(() => setLoading(false));
-}
-
-  return {
-    email, setEmail,
-    password, setPassword,
-    loading, error,
-    handleSubmit, handleGoogleLogin,
-  };
+  return { email, setEmail, password, setPassword, loading, error, handleSubmit };
 }

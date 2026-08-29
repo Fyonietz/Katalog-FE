@@ -7,37 +7,66 @@ interface ProductCardProps {
   onBeli: (produk: Produk) => void;
 }
 
+// Helper untuk gabungkan VITE_API_BASE_URL
+function getImageUrl(imagePath?: string): string {
+  if (!imagePath) return "";
+  if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
+    return imagePath;
+  }
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || "";
+  const cleanBase = baseUrl.replace(/\/+$/, "");
+  const cleanPath = imagePath.startsWith("/") ? imagePath : `/${imagePath}`;
+  return `${cleanBase}${cleanPath}`;
+}
+
 export default function ProductCard({ produk, onBeli }: ProductCardProps) {
+  // Safe Access dengan Fallback Nilai
+  const namaKategori = produk.kategoryProduct?.nama ?? "Percetakan";
+  const namaProduk = produk.nama ?? "Nama Produk";
+  const rawHarga = produk.harga ?? 0;
+  const hargaSatuan = typeof rawHarga === "number" ? rawHarga : parseFloat(rawHarga) || 0;
+  const imageUrl = getImageUrl(produk.imagePath);
+
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 24 }}
+      initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -12 }}
-      transition={{ duration: 0.35, ease: "easeOut" }}
-      whileHover={{ y: -6 }}
-      className="rounded-xl border border-gray-200 bg-white overflow-hidden group"
+      exit={{ opacity: 0, y: 15 }}
+      transition={{ ease: "easeOut", duration: 0.3 }}
+      className="flex flex-col min-w-[210px] w-full rounded-2xl border border-gray-100 bg-white overflow-hidden group hover:shadow-xl transition-all duration-300"
     >
-      <div className="overflow-hidden">
+      <div className="relative overflow-hidden bg-gray-50 aspect-square">
         <img
-          src={produk.gambar}
-          alt={produk.nama}
-          className="w-full aspect-square object-cover transition-transform duration-500 group-hover:scale-110"
+          src={imageUrl}
+          alt={namaProduk}
+          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
         />
       </div>
-      <div className="p-4">
-        <h3 className="font-semibold text-[#1B2A6B]">{produk.nama}</h3>
-        <p className="mt-1 text-sm text-gray-500">
-          Mulai Rp{produk.hargaMulai.toLocaleString("id-ID")}/{produk.satuan}
+
+      <div className="p-4 flex flex-col flex-1">
+        <span className="text-[10px] font-bold text-[#2E9DF7] uppercase tracking-wider mb-1">
+          {namaKategori}
+        </span>
+        <h3 className="text-sm md:text-base font-bold text-[#1B2A6B] line-clamp-2 leading-tight">
+          {namaProduk}
+        </h3>
+
+        <p className="mt-1.5 text-xs md:text-sm font-bold text-[#1B2A6B]">
+          Rp{hargaSatuan.toLocaleString("id-ID")}
         </p>
-        <motion.button
-          whileTap={{ scale: 0.96 }}
-          onClick={() => onBeli(produk)}
-          className="mt-3 w-full rounded-lg bg-[#1B2A6B] py-2 text-sm font-semibold text-white
-                     transition-colors hover:bg-[#15205A]"
-        >
-          Beli
-        </motion.button>
+
+        <div className="mt-auto pt-4">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onBeli(produk);
+            }}
+            className="w-full rounded-xl bg-[#1B2A6B] py-2.5 px-3 text-xs font-bold text-white hover:bg-[#111A42] transition-colors shadow-md text-center"
+          >
+            Beli Sekarang
+          </button>
+        </div>
       </div>
     </motion.div>
   );
