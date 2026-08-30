@@ -22,8 +22,8 @@ export const sidebarItems: SidebarItem[] = [
     label: "Produk",
     icon: Package,
     children: [
-      { label: "Kategori Produk", path: "/admin/dashboard/produk/kategori", icon: Tags },
-      { label: "Daftar Produk", path: "/admin/dashboard/produk/daftar", icon: Package },
+      { label: "Kategori Produk", path: "/dashboard/admin/produk/kategori", icon: Tags },
+      { label: "Daftar Produk", path: "/dashboard/admin/produk/daftar", icon: Package },
     ],
   },
   { label: "Pesanan", path: "/admin/dashboard/pesanan", icon: ShoppingCart },
