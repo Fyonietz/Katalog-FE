@@ -151,26 +151,30 @@ export default function LandingPage() {
           Pilih kategori, lalu klik Beli — kamu akan diminta masuk terlebih dahulu.
         </p>
 
-        <div className="mt-6 flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-          {kategoriList.map((kategori) => (
-            <button
-              key={kategori.id}
-              onClick={() => setActiveKategoriId(kategori.id)}
-              className="relative px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors"
-            >
-              <span className={activeKategoriId === kategori.id ? "text-[#1B2A6B] font-bold" : "text-gray-500"}>
-                {kategori.nama}
-              </span>
-              {activeKategoriId === kategori.id && (
-                <motion.div
-                  layoutId="activeTab"
-                  className="absolute left-0 right-0 -bottom-1 h-0.5 bg-[#2E9DF7] rounded-full"
-                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                />
-              )}
-            </button>
-          ))}
-        </div>
+<div className="mt-6 flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+  {kategoriList.map((kategori, index) => {
+    // Pastikan key tidak undefined
+    const categoryKey = kategori.id ?? `kat-${index}`;
+    return (
+      <button
+        key={categoryKey}
+        onClick={() => setActiveKategoriId(kategori.id)}
+        className="relative px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors"
+      >
+        <span className={activeKategoriId === kategori.id ? "text-[#1B2A6B] font-bold" : "text-gray-500"}>
+          {kategori.nama}
+        </span>
+        {activeKategoriId === kategori.id && (
+          <motion.div
+            layoutId="activeTab"
+            className="absolute left-0 right-0 -bottom-1 h-0.5 bg-[#2E9DF7] rounded-full"
+            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+          />
+        )}
+      </button>
+    );
+  })}
+</div>
 
         <div className="mt-6">
           {loading ? (
@@ -182,13 +186,21 @@ export default function LandingPage() {
               layout 
               className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-5"
             >
-              <AnimatePresence mode="popLayout">
-                {produkTerfilter.map((produk) => (
-                  <div key={produk.id} onClick={() => handleCardClick(produk)} className="cursor-pointer">
-                    <ProductCard produk={produk} onBeli={() => handleBeli(produk)} />
-                  </div>
-                ))}
-              </AnimatePresence>
+<AnimatePresence mode="popLayout">
+  {produkTerfilter.map((produk, index) => {
+    // Pastikan key tidak undefined
+    const itemKey = produk.id ?? `prod-${index}`;
+    return (
+      <div 
+        key={itemKey} 
+        onClick={() => handleCardClick(produk)} 
+        className="cursor-pointer"
+      >
+        <ProductCard produk={produk} onBeli={() => handleBeli(produk)} />
+      </div>
+    );
+  })}
+</AnimatePresence>
             </motion.div>
           )}
         </div>

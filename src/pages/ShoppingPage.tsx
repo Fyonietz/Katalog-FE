@@ -8,7 +8,6 @@ import CartDrawer from "../components/CartDrawer";
 import ProductModal from "../components/ProductModal";
 import type { Produk } from "../models/Produk";
 
-// Variabel animasi konsisten dengan easeOut
 const containerVariants = {
   hidden: { opacity: 0, y: 10 },
   show: {
