@@ -35,7 +35,10 @@ export async function loginWithPassword(
   }
   return data;
 }
-
+export async function getMe(): Promise<UserProfile> {
+  const { data } = await api.get<UserProfile>("/api/v1/auth/me");
+  return data;
+}
 export async function loginWithGoogle(idToken: string): Promise<AuthResult> {
   const { data } = await api.post<AuthResult>("api/v1/auth/google", { idToken });
   

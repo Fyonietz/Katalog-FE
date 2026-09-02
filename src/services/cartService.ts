@@ -32,7 +32,7 @@ export function addToCart(produk: Produk, qty: number): CartItem[] {
   return cart;
 }
 
-export function updateQty(produkId: string, qty: number): CartItem[] {
+export function updateQty(produkId: number, qty: number): CartItem[] {
   let cart = getCart();
   if (qty <= 0) {
     cart = cart.filter((item) => item.produk.id !== produkId);
@@ -45,14 +45,14 @@ export function updateQty(produkId: string, qty: number): CartItem[] {
   return cart;
 }
 
-export function removeFromCart(produkId: string): CartItem[] {
+export function removeFromCart(produkId: number): CartItem[] {
   const cart = getCart().filter((item) => item.produk.id !== produkId);
   saveCart(cart);
   return cart;
 }
 
 export function getCartTotal(cart: CartItem[]): number {
-  return cart.reduce((total, item) => total + item.produk.hargaMulai * item.qty, 0);
+  return cart.reduce((total, item) => total + item.produk.harga * item.qty, 0);
 }
 
 export function clearCart(): void {

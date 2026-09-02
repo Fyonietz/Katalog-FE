@@ -18,3 +18,20 @@ export async function getKategoriList(): Promise<Kategori[]> {
   // await new Promise((resolve) => setTimeout(resolve, 200));
   // return DUMMY_KATEGORI;
 }
+
+// CREATE CATEGORY
+export async function createKategori(nama: string): Promise<Kategori> {
+  const { data } = await api.post<Kategori>("/api/v1/kategory-product", { nama });
+  return data;
+}
+
+// UPDATE CATEGORY
+export async function updateKategori(id: number, nama: string): Promise<Kategori> {
+  const { data } = await api.patch<Kategori>(`/api/v1/kategory-product/${id}`, { nama });
+  return data;
+}
+
+// DELETE CATEGORY
+export async function deleteKategori(id: number): Promise<void> {
+  await api.delete(`/api/v1/kategory-product/${id}`);
+}
