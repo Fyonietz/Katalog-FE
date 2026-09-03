@@ -6,6 +6,7 @@ import { produkColumns } from "../../config/produkColumns";
 import { getProdukList, createProduct, updateProduct } from "../../services/produkService";
 import { getKategoriList, type KategoriProduct } from "../../services/kategoriService";
 import { getStatusList, type StatusProduct } from "../../services/statusService";
+import { showModal } from "../../lib/showModal";
 import type { Produk } from "../../models/Produk";
 
 export default function ProdukAdminPage() {
@@ -107,18 +108,18 @@ export default function ProdukAdminPage() {
       if (editingProduk) {
         // Panggil endpoint PATCH jika sedang mode edit
         await updateProduct(editingProduk.id, formData);
-        alert("Produk berhasil diperbarui!");
+        showModal("Produk berhasil diperbarui!");
       } else {
         // Panggil endpoint POST jika mode tambah
         await createProduct(formData);
-        alert("Produk berhasil ditambahkan!");
+        showModal("Produk berhasil ditambahkan!");
       }
 
       setIsModalOpen(false);
       loadInitialData(); // Reload data tabel
     } catch (err: any) {
       console.error("Gagal menyimpan produk:", err);
-      alert(err.response?.data?.detail || "Gagal menyimpan produk. Periksa kembali form data Anda.");
+      showModal(err.response?.data?.detail || "Gagal menyimpan produk. Periksa kembali form data Anda.");
     } finally {
       setSubmitting(false);
     }

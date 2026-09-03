@@ -11,6 +11,7 @@ import KeranjangPage from "./pages/Pelanggan/KeranjangPage";
 import PesananPage from "./pages/Pelanggan/PesananPage";
 import RiwayatPage from "./pages/Pelanggan/RiwayatPage";
 import SettingsPage from "./pages/Pelanggan/SettingsPage"
+import CheckOutPage from "./pages/Pelanggan/CheckOutPage"
 
 function App() {
   return (
@@ -56,6 +57,7 @@ function App() {
         <Route path="riwayat" element={<RiwayatPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
+      <Route path="/shopping/checkout" element={<CheckOutPage/>}/>
     </Routes>
   );
 }

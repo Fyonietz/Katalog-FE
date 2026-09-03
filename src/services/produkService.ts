@@ -5,10 +5,8 @@ import api from "../services/authService"
 export async function getProdukList(): Promise<Produk[]> {
   try {
     const { data } = await api.get<Produk[]>("/api/v1/products");
-    console.log("RESPONSE API PRODUK:", data); // <-- Cek F12 Console browser
     return data;
   } catch (error) {
-    console.error("GAGAL MENGAMBIL DATA PRODUK:", error);
     return [];
   }
 }

@@ -1,5 +1,6 @@
 // components/CartDrawer.tsx
 import { AnimatePresence, motion } from "framer-motion";
+import { showModal } from "../lib/showModal";
 
 export interface CartItem {
   produk: {
@@ -179,7 +180,7 @@ export default function CartDrawer({
                 </div>
 
                 <button
-                  onClick={() => alert("Lanjut ke proses pembayaran!")}
+                  onClick={() => showModal("Lanjut ke proses pembayaran!")}
                   className="w-full bg-[#1B2A6B] hover:bg-[#111A42] text-white py-3.5 rounded-xl font-bold text-sm shadow-lg shadow-blue-900/20 transition-all text-center"
                 >
                   Lanjut Checkout

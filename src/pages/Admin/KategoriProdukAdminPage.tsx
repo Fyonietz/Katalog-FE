@@ -10,6 +10,7 @@ import {
   deleteKategori,
   type KategoriProduct,
 } from "../../services/kategoriService";
+import { showModal } from "../../lib/showModal";
 
 export default function KategoriProdukAdminPage() {
   const [kategoriList, setKategoriList] = useState<KategoriProduct[]>([]);
@@ -56,10 +57,10 @@ export default function KategoriProdukAdminPage() {
       setSubmitting(true);
       if (editingKategori) {
         await updateKategori(editingKategori.id, nama);
-        alert("Kategori berhasil diperbarui!");
+        showModal("Kategori berhasil diperbarui!");
       } else {
         await createKategori(nama);
-        alert("Kategori berhasil ditambahkan!");
+        showModal("Kategori berhasil ditambahkan!");
       }
 
       setIsModalOpen(false);
@@ -67,7 +68,7 @@ export default function KategoriProdukAdminPage() {
       loadData();
     } catch (err: any) {
       console.error("Gagal menyimpan kategori:", err);
-      alert(err.response?.data?.detail || "Gagal menyimpan kategori.");
+      showModal(err.response?.data?.detail || "Gagal menyimpan kategori.");
     } finally {
       setSubmitting(false);
     }
@@ -78,11 +79,11 @@ export default function KategoriProdukAdminPage() {
     if (confirm(`Apakah Anda yakin ingin menghapus kategori "${kategori.nama}"?`)) {
       try {
         await deleteKategori(kategori.id);
-        alert("Kategori berhasil dihapus!");
+        showModal("Kategori berhasil dihapus!");
         loadData();
       } catch (err: any) {
         console.error("Gagal menghapus kategori:", err);
-        alert(err.response?.data?.detail || "Gagal menghapus kategori.");
+        showModal(err.response?.data?.detail || "Gagal menghapus kategori.");
       }
     }
   };

@@ -4,6 +4,7 @@ import "leaflet/dist/leaflet.css";
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
 import L from "leaflet";
 import { getAddressFromLatLng, createAlamat, updateAlamat, type AlamatGetResponse } from "../services/alamatService";
+import { showModal } from "../lib/showModal";
 
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
 import markerIcon from "leaflet/dist/images/marker-icon.png";
@@ -81,7 +82,7 @@ export default function MapPickerModal({ isOpen, onClose, userId, editData, onSu
 
   const handleSubmit = async () => {
     if (!alamatContent.trim() || !noTelepon.trim()) {
-      alert("Harap lengkapi nomor telepon dan alamat!");
+      showModal("Harap lengkapi nomor telepon dan alamat!");
       return;
     }
 
@@ -96,18 +97,18 @@ export default function MapPickerModal({ isOpen, onClose, userId, editData, onSu
       if (editData && editData.id) {
         // Panggil PATCH Update
         await updateAlamat(editData.id, payload);
-        alert("Alamat berhasil diperbarui!");
+        showModal("Alamat berhasil diperbarui!");
       } else {
         // Panggil POST Create
         await createAlamat(payload);
-        alert("Alamat berhasil ditambahkan!");
+        showModal("Alamat berhasil ditambahkan!");
       }
 
       onSuccess();
       onClose();
     } catch (err) {
       console.error("Gagal simpan alamat:", err);
-      alert("Terjadi kesalahan saat menyimpan alamat.");
+      showModal("Terjadi kesalahan saat menyimpan alamat.");
     } finally {
       setSubmitting(false);
     }

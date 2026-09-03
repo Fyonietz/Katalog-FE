@@ -8,6 +8,7 @@ import {
 } from "../../services/cartService";
 import { getProdukList } from "../../services/produkService";
 import ProductModal from "../../components/ProductModal";
+import { showModal } from "../../lib/showModal";
 import type { CartItem } from "../../models/CartItem";
 import type { Produk } from "../../models/Produk";
 
@@ -141,7 +142,7 @@ export default function KeranjangPage() {
               </span>
             </div>
             <button
-              onClick={() => alert("Lanjut ke proses Checkout!")}
+              onClick={() => showModal("Lanjut ke proses Checkout!")}
               className="w-full bg-[#1B2A6B] hover:bg-[#111A42] text-white py-3 rounded-xl text-xs font-bold shadow-md"
             >
               Lanjut ke Checkout
