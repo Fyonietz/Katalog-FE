@@ -9,8 +9,8 @@ export interface AlamatGetResponse {
   content: string;
 }
 
+// UPDATE: Hapus IdUser sesuai dokumen alamat.md terbaru
 export interface AlamatPostPayload {
-  IdUser: number;
   noTelepon: string;
   content: string;
 }
@@ -25,7 +25,6 @@ export async function createAlamat(payload: AlamatPostPayload): Promise<any> {
   return data;
 }
 
-// FUNGSI BARU: Untuk PATCH / Update Alamat
 export async function updateAlamat(id: number, payload: Partial<AlamatPostPayload>): Promise<any> {
   const { data } = await api.patch(`/api/v1/alamat/${id}`, payload);
   return data;

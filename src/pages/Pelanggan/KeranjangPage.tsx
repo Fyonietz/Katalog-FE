@@ -1,18 +1,19 @@
 // src/pages/Pelanggan/KeranjangPage.tsx
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   getCart,
-  updateQty, // Ganti updateCartQty menjadi updateQty
+  updateQty,
   removeFromCart,
   getCartTotal,
 } from "../../services/cartService";
 import { getProdukList } from "../../services/produkService";
 import ProductModal from "../../components/ProductModal";
-import { showModal } from "../../lib/showModal";
 import type { CartItem } from "../../models/CartItem";
 import type { Produk } from "../../models/Produk";
 
 export default function KeranjangPage() {
+  const navigate = useNavigate();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [selectedProduk, setSelectedProduk] = useState<Produk | null>(null);
 
@@ -41,7 +42,7 @@ export default function KeranjangPage() {
   };
 
   const handleUpdateQty = (id: number, newQty: number) => {
-    updateQty(id, newQty); // Menggunakan updateQty
+    updateQty(id, newQty);
     refreshCart();
   };
 
@@ -142,8 +143,8 @@ export default function KeranjangPage() {
               </span>
             </div>
             <button
-              onClick={() => showModal("Lanjut ke proses Checkout!")}
-              className="w-full bg-[#1B2A6B] hover:bg-[#111A42] text-white py-3 rounded-xl text-xs font-bold shadow-md"
+              onClick={() => navigate("/shopping/checkout")}
+              className="w-full bg-[#1B2A6B] hover:bg-[#111A42] text-white py-3 rounded-xl text-xs font-bold shadow-md transition-all"
             >
               Lanjut ke Checkout
             </button>

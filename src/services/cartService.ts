@@ -1,4 +1,4 @@
-// services/cartService.ts
+// src/services/cartService.ts
 import type { CartItem } from "../models/CartItem";
 import type { Produk } from "../models/Produk";
 
@@ -15,17 +15,34 @@ export function getCart(): CartItem[] {
 }
 
 function saveCart(cart: CartItem[]): void {
+  // Catatan: JSON.stringify akan menghilangkan objek File.
+  // Idealnya file desain langsung di-upload ke server temp, 
+  // namun untuk implementasi ini kita simpan referensinya jika ada.
   localStorage.setItem(CART_KEY, JSON.stringify(cart));
 }
 
-export function addToCart(produk: Produk, qty: number): CartItem[] {
+// Update fungsi ini untuk menerima parameter kustomisasi lengkap
+export function addToCart(
+  produk: Produk, 
+  qty: number, 
+  idUkuranProduk?: number,
+  ukuranCustom?: string,
+  notes?: string, 
+  desainText?: string, 
+  desainFile?: File | null
+): CartItem[] {
   const cart = getCart();
   const existing = cart.find((item) => item.produk.id === produk.id);
 
   if (existing) {
     existing.qty += qty;
+    if (idUkuranProduk) existing.idUkuranProduk = idUkuranProduk;
+    if (ukuranCustom !== undefined) existing.ukuranCustom = ukuranCustom;
+    if (notes !== undefined) existing.notes = notes;
+    if (desainText !== undefined) existing.desainText = desainText;
+    if (desainFile !== undefined) existing.desainFile = desainFile;
   } else {
-    cart.push({ produk, qty });
+    cart.push({ produk, qty, idUkuranProduk, ukuranCustom, notes, desainText, desainFile });
   }
 
   saveCart(cart);
@@ -58,3 +75,5 @@ export function getCartTotal(cart: CartItem[]): number {
 export function clearCart(): void {
   localStorage.removeItem(CART_KEY);
 }
+
+export { updateQty as updateCartQty };
