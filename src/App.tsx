@@ -5,6 +5,7 @@ import ShoppingPage from "./pages/ShoppingPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import DashboardAdminPage from "./pages/Admin/DashboardMain";
 import ProdukAdmin from "./pages/Admin/ProdukAdminPage";
+import PesananAdminPage from "./pages/Admin/PesananAdminPage";
 import KategoriProdukAdmin from "./pages/Admin/KategoriProdukAdminPage";
 import CustomerLayout from "./pages/Pelanggan/CustomerLayout";
 import KeranjangPage from "./pages/Pelanggan/KeranjangPage";
@@ -46,7 +47,14 @@ function App() {
         </ProtectedRoute>
       }
       />
-
+ <Route
+        path="/dashboard/admin/pesanan"
+        element={
+          <ProtectedRoute allowedRoles={["Admin", "Petugas"]}>
+            <PesananAdminPage />
+          </ProtectedRoute>
+        }
+      />
  //Pelanggan   
 <Route path="/dashboard/pelanggan" element={<CustomerLayout />}>
         {/* Redirect default /dashboard/pelanggan ke /dashboard/pelanggan/keranjang */}

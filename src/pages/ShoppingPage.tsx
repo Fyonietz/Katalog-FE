@@ -1,5 +1,5 @@
-// pages/ShoppingPage.tsx
-import { useState } from "react";
+// src/pages/ShoppingPage.tsx
+import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useShoppingController } from "../hooks/useShoppingController";
 import Sidebar from "../components/Sidebar";
@@ -7,6 +7,9 @@ import ShoppingProductCard from "../components/ShoppingProductCard";
 import CartDrawer from "../components/CartDrawer";
 import ProductModal from "../components/ProductModal";
 import type { Produk } from "../models/Produk";
+
+// IMPORT cartService secara langsung agar data selalu real-time
+import { getCart, getCartTotal, updateCartQty, removeFromCart } from "../services/cartService";
 
 const containerVariants = {
   hidden: { opacity: 0, y: 10 },
@@ -35,17 +38,29 @@ export default function ShoppingPage() {
     loading,
     search,
     setSearch,
-    cart,
     cartOpen,
     setCartOpen,
-    cartTotal,
-    cartCount,
     getQty,
     setQty,
-    handleAddToCart,
-    handleUpdateCartQty,
-    handleRemoveFromCart,
   } = useShoppingController();
+
+  // 1. STATE LOKAL KERANJANG (Sinkronisasi langsung dengan localStorage)
+  const [localCart, setLocalCart] = useState(getCart());
+  const localCartTotal = getCartTotal(localCart);
+  const localCartCount = localCart.reduce((sum, item) => sum + item.qty, 0);
+
+  // Fungsi untuk menyegarkan keranjang di UI
+  const refreshLocalCart = () => {
+    setLocalCart(getCart());
+  };
+
+  // Dengarkan perubahan localStorage jika ada aksi di tab lain
+  useEffect(() => {
+    const handleStorageChange = () => refreshLocalCart();
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
+
 
   // State untuk melacak produk mana yang diklik untuk dibuka modalnya
   const [selectedProduk, setSelectedProduk] = useState<Produk | null>(null);
@@ -53,7 +68,7 @@ export default function ShoppingPage() {
   return (
     <div className="h-[100dvh] bg-[#F4F6FB] relative w-full overflow-hidden flex flex-col">
       
-      {/* 1. TOPBAR UTAMA - Tinggi absolut agar presisi dengan Sidebar */}
+      {/* 1. TOPBAR UTAMA */}
       <div className="shrink-0 z-30 h-[70px] md:h-[76px] bg-white shadow-sm border-b border-gray-200 px-4 md:px-6 flex items-center gap-4">
         
         <span className="font-extrabold text-[#1B2A6B] text-xl tracking-tight whitespace-nowrap">
@@ -81,12 +96,12 @@ export default function ShoppingPage() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
           </svg>
           Keranjang
-          {cartCount > 0 && (
+          {localCartCount > 0 && (
             <motion.span 
               initial={{ scale: 0 }} animate={{ scale: 1 }}
               className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-black w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow-sm"
             >
-              {cartCount}
+              {localCartCount}
             </motion.span>
           )}
         </motion.button>
@@ -120,7 +135,7 @@ export default function ShoppingPage() {
           onSearchChange={setSearch}
         />
 
-        {/* 3. KONTEN PRODUK UTAMA (Scrollable Area) */}
+        {/* 3. KONTEN PRODUK UTAMA */}
         <main className="flex-1 p-4 md:p-8 min-w-0 overflow-y-auto pb-32 md:pb-8">
           <div className="flex items-end justify-between mb-6">
             <div>
@@ -140,13 +155,12 @@ export default function ShoppingPage() {
               <p className="text-lg text-gray-400 font-medium">Ups, produk tidak ditemukan.</p>
             </div>
           ) : (
-<motion.div 
+          <motion.div 
             key={activeKategoriId}
             variants={containerVariants}
             initial="hidden"
             animate="show"
             exit="exit"
-            /* UBAH DI SINI: Auto fill dengan batas minimal 220px per card */
             className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4 md:gap-5"
           >
             <AnimatePresence mode="popLayout">
@@ -156,7 +170,7 @@ export default function ShoppingPage() {
                   produk={produk}
                   qty={getQty(produk.id.toString())}
                   onQtyChange={(qty) => setQty(produk.id.toString(), qty)}
-                  onAddToCart={() => handleAddToCart(produk)}
+                  onAddToCart={() => setSelectedProduk(produk)} 
                   onClickCard={() => setSelectedProduk(produk)}
                 />
               ))}
@@ -168,7 +182,7 @@ export default function ShoppingPage() {
 
       {/* Floating Action Button (FAB) Keranjang Khusus Mobile */}
       <AnimatePresence>
-        {cartCount > 0 && (
+        {localCartCount > 0 && (
           <motion.button
             initial={{ scale: 0, y: 50 }}
             animate={{ scale: 1, y: 0 }}
@@ -181,33 +195,39 @@ export default function ShoppingPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
             <span className="absolute -top-1 -left-1 bg-red-500 text-white text-[11px] font-black w-6 h-6 rounded-full flex items-center justify-center border-2 border-white">
-              {cartCount}
+              {localCartCount}
             </span>
           </motion.button>
         )}
       </AnimatePresence>
 
-      {/* Komponen Laci Keranjang */}
+      {/* Laci Keranjang disinkronisasi dengan localCart */}
       <CartDrawer
         open={cartOpen}
         onClose={() => setCartOpen(false)}
-        cart={cart}
-        cartTotal={cartTotal}
-        onUpdateQty={handleUpdateCartQty}
-        onRemove={handleRemoveFromCart}
+        cart={localCart}
+        cartTotal={localCartTotal}
+        onUpdateQty={(id: number, qty: number) => {
+          updateCartQty(id, qty);
+          refreshLocalCart();
+        }}
+        onRemove={(id: number) => {
+          removeFromCart(id);
+          refreshLocalCart();
+        }}
       />
 
-      {/* Komponen Modal Produk Ala Discord */}
       <ProductModal
         produk={selectedProduk}
         isOpen={selectedProduk !== null}
         onClose={() => setSelectedProduk(null)}
-        qty={selectedProduk ? getQty(selectedProduk.id) : 1}
+        qty={selectedProduk ? getQty(selectedProduk.id.toString()) : 1}
         onQtyChange={(qty) => {
-          if (selectedProduk) setQty(selectedProduk.id, qty);
+          if (selectedProduk) setQty(selectedProduk.id.toString(), qty);
         }}
         onAddToCart={() => {
-          if (selectedProduk) handleAddToCart(selectedProduk);
+          refreshLocalCart(); // PENTING: Refresh state UI seketika setelah data masuk Modal
+          setCartOpen(true);  // Langsung buka laci keranjang
         }}
       />
       

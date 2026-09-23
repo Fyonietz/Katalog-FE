@@ -1,6 +1,7 @@
 // src/pages/Pelanggan/PesananPage.tsx
 import { useEffect, useState } from "react";
-import { getPesananUser, type PesananResponse } from "../../services/pesananService";
+import { Link } from "react-router-dom";
+import { getPesananUser, deletePesanan, type PesananResponse } from "../../services/pesananService";
 import { createPaymentSnap, checkPaymentStatus } from "../../services/paymentService";
 
 declare global {
@@ -13,12 +14,14 @@ export default function PesananPage() {
   const [pesananList, setPesananList] = useState<PesananResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [uploadingId, setUploadingId] = useState<number | null>(null);
 
   const fetchPesanan = async () => {
     try {
       setLoading(true);
       const data = await getPesananUser();
-      setPesananList(data || []);
+      setPesananList((data || []).sort((a, b) => b.id - a.id));
     } catch (err) {
       console.error("Gagal memuat pesanan:", err);
     } finally {
@@ -30,11 +33,10 @@ export default function PesananPage() {
     fetchPesanan();
   }, []);
 
-  // Fungsi Polling status pembayaran (Frontend Snap Docs)
   const pollPaymentStatus = async (idPesanan: number) => {
     let attempts = 0;
-    const maxAttempts = 15; // Coba 15 kali (30 detik)
-
+    const maxAttempts = 15; 
+    
     const interval = setInterval(async () => {
       attempts++;
       try {
@@ -42,132 +44,269 @@ export default function PesananPage() {
         if (paymentInfo.paymentStatus === "paid") {
           clearInterval(interval);
           alert("Pembayaran berhasil dikonfirmasi!");
-          fetchPesanan(); // Refresh data agar badge berubah jadi Paid
+          fetchPesanan();
         } else if (["failed", "expired", "cancelled"].includes(paymentInfo.paymentStatus)) {
           clearInterval(interval);
-          alert(`Pembayaran ${paymentInfo.paymentStatus}.`);
+          alert(`Status Pembayaran: ${paymentInfo.paymentStatus}.`);
           fetchPesanan();
         }
       } catch (err) {
         console.error("Gagal polling status", err);
       }
-
       if (attempts >= maxAttempts) {
         clearInterval(interval);
-        fetchPesanan(); // Refresh terakhir setelah polling selesai
+        fetchPesanan();
       }
     }, 2000);
   };
 
-  // Fungsi Melanjutkan Pembayaran yang tertunda
   const handleLanjutkanPembayaran = async (idPesanan: number) => {
     setProcessingId(idPesanan);
     try {
-      // 1. Minta Snap Token ke Backend
       const paymentData = await createPaymentSnap(idPesanan);
-
-      // 2. Buka Snap Midtrans
-      window.snap.pay(paymentData.snapToken, {
-        onSuccess: () => pollPaymentStatus(idPesanan),
-        onPending: () => pollPaymentStatus(idPesanan),
-        onError: () => {
-          alert("Pembayaran gagal diproses oleh Midtrans.");
-          setProcessingId(null);
-        },
-        onClose: () => {
-          setProcessingId(null);
-          fetchPesanan();
-        }
-      });
+      
+      if (window.snap) {
+        window.snap.pay(paymentData.snapToken, {
+          onSuccess: () => pollPaymentStatus(idPesanan),
+          onPending: () => pollPaymentStatus(idPesanan),
+          onError: () => {
+            alert("Pembayaran gagal diproses.");
+            setProcessingId(null);
+            fetchPesanan();
+          },
+          onClose: () => {
+            setProcessingId(null);
+            fetchPesanan();
+          }
+        });
+      } else if (paymentData.redirectUrl) {
+        window.location.href = paymentData.redirectUrl;
+      }
     } catch (err: any) {
-      alert("Gagal memuat token pembayaran: " + (err.response?.data?.message || err.message));
+      alert(err.message || "Gagal memuat pembayaran.");
       setProcessingId(null);
+    }
+  };
+
+  const handleBatalkanPesanan = async (idPesanan: number) => {
+    if (!confirm("Apakah Anda yakin ingin membatalkan dan menghapus pesanan ini?")) return;
+    
+    setDeletingId(idPesanan);
+    try {
+      await deletePesanan(idPesanan);
+      alert("Pesanan berhasil dibatalkan.");
+      fetchPesanan();
+    } catch (err: any) {
+      alert(err.message || "Gagal membatalkan pesanan. Mungkin pesanan sudah terkunci di sistem pembayaran[cite: 2].");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  // Fungsi untuk update/upload file desain via PUT /api/v1/pesanan/{id}
+  const handleUploadFileDesain = async (pesanan: PesananResponse, file: File | null) => {
+    if (!file) return;
+    setUploadingId(pesanan.id);
+
+    try {
+      const form = new FormData();
+      form.append("idAlamat", String(pesanan.idAlamat));
+
+      // Rekonstruksi items dari detail yang sudah ada
+      pesanan.details.forEach((item, index) => {
+        form.append(`items[${index}].idProduct`, String(item.idProduct));
+        form.append(`items[${index}].qty`, String(item.qty));
+        
+        if (item.idUkuranProduk) {
+          form.append(`items[${index}].idUkuranProduk`, String(item.idUkuranProduk));
+        }
+        if (item.ukuranCustom) {
+          form.append(`items[${index}].ukuranCustom`, item.ukuranCustom);
+        }
+        if (item.notes) {
+          form.append(`items[${index}].notes`, item.notes);
+        }
+        if (item.desainText) {
+          form.append(`items[${index}].desainText`, item.desainText);
+        }
+        // Masukkan file baru yang di-upload
+        form.append(`items[${index}].desain`, file);
+      });
+
+      const token = localStorage.getItem("token") || "";
+      const API_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5283";
+
+      const res = await fetch(`${API_URL}/api/v1/pesanan/${pesanan.id}`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: form,
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Gagal memperbarui file desain.");
+      }
+
+      alert("File desain berhasil diunggah/diperbarui!");
+      fetchPesanan();
+    } catch (err: any) {
+      alert(err.message || "Terjadi kesalahan saat mengunggah file.");
+    } finally {
+      setUploadingId(null);
     }
   };
 
   const getStatusBadge = (status: string) => {
     switch (status.toLowerCase()) {
-      case "paid": return <span className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-[10px] font-extrabold uppercase">Lunas</span>;
-      case "pending": return <span className="bg-amber-100 text-amber-700 px-2 py-1 rounded text-[10px] font-extrabold uppercase">Menunggu Pembayaran</span>;
-      case "unpaid": return <span className="bg-red-100 text-red-700 px-2 py-1 rounded text-[10px] font-extrabold uppercase">Belum Bayar</span>;
-      default: return <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-[10px] font-extrabold uppercase">{status}</span>;
+      case "paid": return <span className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-[10px] font-extrabold uppercase tracking-wide">Lunas</span>;
+      case "pending": return <span className="bg-amber-100 text-amber-700 px-2 py-1 rounded text-[10px] font-extrabold uppercase tracking-wide">Menunggu Pembayaran</span>;
+      case "unpaid": return <span className="bg-red-100 text-red-700 px-2 py-1 rounded text-[10px] font-extrabold uppercase tracking-wide">Belum Bayar</span>;
+      case "cancelled":
+      case "expired": 
+      case "failed": return <span className="bg-gray-100 text-gray-500 px-2 py-1 rounded text-[10px] font-extrabold uppercase tracking-wide">Dibatalkan</span>;
+      default: return <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-[10px] font-extrabold uppercase tracking-wide">{status}</span>;
     }
   };
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6 max-w-5xl mx-auto">
       <div>
         <h1 className="text-xl md:text-2xl font-extrabold text-[#1B2A6B]">Pesanan Saya</h1>
-        <p className="text-xs md:text-sm text-gray-500 mt-1">
-          Pantau status pengerjaan dan pembayaran produk cetak Anda.
-        </p>
+        <p className="text-xs md:text-sm text-gray-500 mt-1">Selesaikan pembayaran atau unggah file desain cetakan Anda.</p>
       </div>
 
       {loading ? (
         <div className="space-y-4">
           <div className="h-32 bg-gray-100 rounded-2xl animate-pulse"></div>
-          <div className="h-32 bg-gray-100 rounded-2xl animate-pulse"></div>
         </div>
       ) : pesananList.length === 0 ? (
-        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm text-center py-12">
-          <svg className="w-16 h-16 text-gray-300 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-          </svg>
-          <p className="text-sm font-bold text-gray-600">Belum Ada Pesanan</p>
-          <a href="/shopping" className="mt-4 inline-block bg-[#1B2A6B] text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow-md">
-            Pesan Sekarang
-          </a>
+        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm text-center py-16">
+          <p className="text-sm font-bold text-[#1B2A6B]">Belum Ada Pesanan</p>
+          <Link to="/shopping" className="mt-4 inline-block bg-[#1B2A6B] text-white text-xs font-bold px-6 py-3 rounded-xl shadow-md">
+            Mulai Belanja
+          </Link>
         </div>
       ) : (
-        <div className="space-y-4">
-          {pesananList.map((pesanan) => (
-            <div key={pesanan.id} className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xs font-bold text-gray-500">Order #{pesanan.id}</span>
-                  <span>•</span>
-                  <span className="text-[10px] text-gray-400">
-                    {new Date(pesanan.createdAt).toLocaleDateString("id-ID", { day: 'numeric', month: 'long', year: 'numeric' })}
-                  </span>
-                </div>
+        <div className="space-y-5">
+          {pesananList.map((pesanan) => {
+            const isUnpaid = pesanan.paymentStatus.toLowerCase() === "unpaid";
+            const canPay = ["unpaid", "pending"].includes(pesanan.paymentStatus.toLowerCase());
+            
+            return (
+              <div key={pesanan.id} className="bg-white rounded-2xl p-5 md:p-6 border border-gray-100 shadow-sm flex flex-col md:flex-row md:items-start justify-between gap-5">
                 
-                <div className="mb-3">
-                  {getStatusBadge(pesanan.paymentStatus)}
-                  <span className="ml-2 bg-blue-50 text-blue-600 px-2 py-1 rounded text-[10px] font-bold uppercase border border-blue-100">
-                    {pesanan.statusPengerjaan}
-                  </span>
+                {/* Info Kiri */}
+                <div className="flex-1 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-black text-gray-400">ORDER #{pesanan.id}</span>
+                    <span className="text-xs font-semibold text-gray-400">
+                      {new Date(pesanan.createdAt).toLocaleDateString("id-ID", { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </span>
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-2">
+                    {getStatusBadge(pesanan.paymentStatus)}
+                    {!["cancelled", "expired", "failed"].includes(pesanan.paymentStatus.toLowerCase()) && (
+                       <span className="bg-blue-50 text-blue-600 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wide border border-blue-100">
+                        Pengerjaan: {pesanan.statusPengerjaan}
+                       </span>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-3 pt-1">
+                    {pesanan.details.map((item) => {
+                      const API_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5283";
+                      const fileUrl = item.desainFilePath 
+                        ? (item.desainFilePath.startsWith("http") ? item.desainFilePath : `${API_URL}${item.desainFilePath}`) 
+                        : null;
+
+                      return (
+                        <div key={item.id} className="bg-gray-50 p-3.5 rounded-xl border border-gray-100 space-y-2">
+                          <div className="flex justify-between items-center">
+                            <p className="text-xs font-bold text-[#1B2A6B]">
+                              {item.qty}x {item.namaProduct}
+                            </p>
+                          </div>
+
+                          {(item.ukuranCustom || item.notes || item.desainText) && (
+                            <div className="space-y-0.5 text-[10px] text-gray-500 font-medium">
+                              {item.ukuranCustom && <p>• Ukuran: {item.ukuranCustom}</p>}
+                              {item.notes && <p>• Catatan: {item.notes}</p>}
+                              {item.desainText && <p>• Teks: {item.desainText}</p>}
+                            </div>
+                          )}
+
+                          {/* Status & Tombol Upload File Desain Khusus Pesanan Ini */}
+                          <div className="pt-2 border-t border-gray-200/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                            <div className="text-[10px]">
+                              <span className="font-bold text-gray-500">File Desain(Opsional): </span>
+                              {fileUrl ? (
+                                <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 font-bold underline">
+                                  Lihat File Terunggah
+                                </a>
+                              ) : (
+                                <span className="text-amber-600 font-semibold">Belum ada file</span>
+                              )}
+                            </div>
+
+                            {/* Opsi Upload hanya muncul jika status masih Unpaid */}
+                            {isUnpaid ? (
+                              <div className="w-full sm:w-auto">
+                                <label className={`inline-block px-3 py-1.5 bg-[#2E9DF7] hover:bg-[#1B2A6B] text-white text-[10px] font-bold rounded-lg cursor-pointer transition-colors shadow-sm ${uploadingId === pesanan.id ? "opacity-50 cursor-not-allowed" : ""}`}>
+                                  {uploadingId === pesanan.id ? "Mengunggah..." : (fileUrl ? "Ganti File Desain" : "Upload File Desain")}
+                                  <input
+                                    type="file"
+                                    disabled={uploadingId === pesanan.id}
+                                    onChange={(e) => handleUploadFileDesain(pesanan, e.target.files ? e.target.files[0] : null)}
+                                    className="hidden"
+                                  />
+                                </label>
+                              </div>
+                            ) : (
+                              <span className="text-[9px] text-gray-400 italic">File terkunci</span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
 
-                <div className="space-y-1">
-                  {pesanan.details.map((item) => (
-                    <p key={item.id} className="text-xs font-bold text-[#1B2A6B]">
-                      {item.qty}x {item.namaProduct} 
-                    </p>
-                  ))}
-                </div>
-              </div>
+                {/* Info Kanan (Harga & Aksi Bayar/Batal) */}
+                <div className="flex flex-col items-start md:items-end gap-4 border-t md:border-t-0 md:border-l border-gray-100 pt-4 md:pt-0 md:pl-6 w-full md:w-auto shrink-0">
+                  <div className="w-full md:text-right">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Total Bayar</p>
+                    <p className="text-xl font-black text-[#2E9DF7]">Rp {pesanan.totalHarga.toLocaleString("id-ID")}</p>
+                  </div>
+                  
+                  <div className="flex flex-col gap-2.5 w-full">
+                    {canPay && (
+                      <button
+                        onClick={() => handleLanjutkanPembayaran(pesanan.id)}
+                        disabled={processingId === pesanan.id}
+                        className="w-full px-6 py-2.5 bg-[#1B2A6B] hover:bg-[#111A42] text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center justify-center"
+                      >
+                        {processingId === pesanan.id ? "Memproses..." : "Bayar Sekarang"}
+                      </button>
+                    )}
 
-              <div className="flex flex-col items-start md:items-end gap-3 border-t md:border-t-0 md:border-l border-gray-100 pt-3 md:pt-0 md:pl-5">
-                <div>
-                  <p className="text-[10px] font-bold text-gray-400 text-left md:text-right">Total Bayar</p>
-                  <p className="text-base font-extrabold text-[#2E9DF7]">
-                    Rp {pesanan.totalHarga.toLocaleString("id-ID")}
-                  </p>
+                    {isUnpaid ? (
+                       <button
+                         onClick={() => handleBatalkanPesanan(pesanan.id)}
+                         disabled={deletingId === pesanan.id}
+                         className="w-full px-4 py-2 border-2 border-red-100 text-red-500 hover:bg-red-50 rounded-xl text-xs font-bold transition-all text-center"
+                       >
+                         {deletingId === pesanan.id ? "Membatalkan..." : "Batalkan Pesanan"}
+                       </button>
+                    ) : null}
+                  </div>
                 </div>
-                
-                {/* Tombol Lanjutkan Pembayaran jika status unpaid/pending */}
-                {["unpaid", "pending"].includes(pesanan.paymentStatus.toLowerCase()) && (
-                  <button
-                    onClick={() => handleLanjutkanPembayaran(pesanan.id)}
-                    disabled={processingId === pesanan.id}
-                    className="w-full md:w-auto px-4 py-2 bg-[#1B2A6B] hover:bg-[#111A42] text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center justify-center gap-2"
-                  >
-                    {processingId === pesanan.id ? "Memproses..." : "Bayar Sekarang"}
-                  </button>
-                )}
+
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

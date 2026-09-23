@@ -23,14 +23,12 @@ export default function ProductModal({
   const [ukuranCustom, setUkuranCustom] = useState("");
   const [notes, setNotes] = useState("");
   const [desainText, setDesainText] = useState("");
-  const [desainFile, setDesainFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (isOpen) {
       setUkuranCustom("");
       setNotes("");
       setDesainText("");
-      setDesainFile(null);
     }
   }, [isOpen]);
 
@@ -44,8 +42,8 @@ export default function ProductModal({
     : "https://via.placeholder.com/300";
 
   const handleAddWithCustomization = () => {
-    // Kita mengirim undefined untuk idUkuranProduk karena kita menggunakan input ukuranCustom
-    addToCart(produk, qty, undefined, ukuranCustom, notes, desainText, desainFile);
+    // Parameter terakhir (file desain) kita abaikan/tidak dikirim ke cartService
+    addToCart(produk, qty, undefined, ukuranCustom, notes, desainText);
     onAddToCart();
     onClose();
   };
@@ -105,18 +103,11 @@ export default function ProductModal({
                 className="w-full p-2.5 border rounded-xl text-xs outline-none focus:ring-2 focus:ring-[#2E9DF7]"
               />
             </div>
-
-            <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">Upload File Desain (Opsional)</label>
-              <input
-                type="file"
-                onChange={(e) => {
-                  if (e.target.files && e.target.files[0]) {
-                    setDesainFile(e.target.files[0]);
-                  }
-                }}
-                className="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-[#2E9DF7] hover:file:bg-blue-100"
-              />
+            
+            {/* Input upload file telah dipindahkan ke halaman Checkout */}
+            <div className="bg-blue-50/50 border border-blue-100 p-3 rounded-xl mt-2">
+              <p className="text-[10px] font-bold text-blue-600">ℹ️ Info Pengiriman File</p>
+              <p className="text-[10px] text-gray-600 mt-0.5">Anda dapat mengunggah file desain (JPG, PNG, PDF) nanti pada saat halaman Checkout.</p>
             </div>
           </div>
 

@@ -1,9 +1,11 @@
-// pages/admin/DashboardMain.tsx
-import { ShieldCheck, GraduationCap, ShoppingCart, Users, Package, CheckCircle2, Lightbulb, Tags } from "lucide-react";
+// src/pages/Admin/DashboardMain.tsx
+import { useEffect, useState } from "react";
+import { ShieldCheck, GraduationCap, ShoppingCart, Users, Package, CheckCircle2, Tags } from "lucide-react";
 import AdminSidebar from "../../components/layout/AdminSidebar";
 import StatCard from "../../components/StatCard";
 import QuickActionCard from "../../components/QuickActionCard";
 import { useDashboardAdminController } from "../../hooks/useDashboardAdminController";
+import { getAllPesanan, type PesananResponse } from "../../services/pesananService";
 
 const SETUP_STEPS = [
   { label: "Kategori Produk", done: true },
@@ -13,7 +15,48 @@ const SETUP_STEPS = [
 ];
 
 export default function DashboardMain() {
-  const { stats, loading, nama } = useDashboardAdminController();
+  const { stats, loading: hookLoading, nama } = useDashboardAdminController();
+  
+  // State khusus untuk pesanan
+  const [pesananList, setPesananList] = useState<PesananResponse[]>([]);
+  const [pesananLoading, setPesananLoading] = useState<boolean>(true);
+  const [pesananError, setPesananError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchSemuaPesanan = async () => {
+      try {
+        setPesananLoading(true);
+        const data = await getAllPesanan();
+        const sortedData = data.sort((a, b) => b.id - a.id); // Urutkan terbaru
+        setPesananList(sortedData);
+      } catch (err: any) {
+        setPesananError(err.message || "Gagal memuat data pesanan.");
+      } finally {
+        setPesananLoading(false);
+      }
+    };
+
+    fetchSemuaPesanan();
+  }, []);
+
+  // Hitung Statistik Berdasarkan Pesanan (Jika hook Anda tidak menyediakannya)
+  const totalPesananMasuk = pesananList.length;
+  const pesananPendingBayar = pesananList.filter(p => ["unpaid", "pending"].includes(p.paymentStatus)).length;
+  // Gunakan stats dari hook jika ada, jika tidak fallback ke perhitungan lokal
+  const displayTotalPesanan = stats?.totalPesanan ?? totalPesananMasuk;
+  const displayPesananPending = stats?.pesananPending ?? pesananPendingBayar;
+
+  const getPaymentBadge = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "paid": return <span className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-xs font-bold">Lunas</span>;
+      case "pending": return <span className="bg-amber-100 text-amber-700 px-2 py-1 rounded text-xs font-bold">Pending</span>;
+      case "unpaid": return <span className="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold">Belum Bayar</span>;
+      case "cancelled":
+      case "expired": 
+      case "failed": return <span className="bg-gray-100 text-gray-500 px-2 py-1 rounded text-xs font-bold">Batal</span>;
+      default: return <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs font-bold">{status}</span>;
+    }
+  };
 
   return (
     <div className="flex h-screen bg-[#F4F6FB]">
@@ -25,7 +68,7 @@ export default function DashboardMain() {
           <h1 className="text-lg font-bold text-[#1B2A6B]">Dashboard</h1>
         </div>
 
-        <div className="p-8 max-w-7xl mx-auto">
+        <div className="p-8 max-w-7xl mx-auto space-y-6">
           {/* Hero banner */}
           <div className="relative overflow-hidden rounded-2xl bg-[#1B2A6B] p-8 text-white">
             <div className="relative flex items-center justify-between gap-6 flex-wrap">
@@ -52,17 +95,67 @@ export default function DashboardMain() {
           </div>
 
           {/* Stat cards */}
-          {!loading && stats && (
-            <div className="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatCard icon={Package} label="Total Produk" value={stats.totalProduk} actionLabel="Kelola" />
-              <StatCard icon={ShoppingCart} label="Total Pesanan" value={stats.totalPesanan} actionLabel="Kelola" />
-              <StatCard icon={Users} label="Total Pelanggan" value={stats.totalPelanggan} actionLabel="Kelola" />
-              <StatCard icon={GraduationCap} label="Pesanan Pending" value={stats.pesananPending} />
+          {(!hookLoading || !pesananLoading) && (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <StatCard icon={Package} label="Total Produk" value={stats?.totalProduk ?? 0} actionLabel="Kelola" />
+              <StatCard icon={ShoppingCart} label="Total Pesanan" value={displayTotalPesanan} actionLabel="Kelola" />
+              <StatCard icon={Users} label="Total Pelanggan" value={stats?.totalPelanggan ?? 0} actionLabel="Kelola" />
+              <StatCard icon={GraduationCap} label="Pesanan Pending" value={displayPesananPending} />
             </div>
           )}
 
+          {/* Tabel Pesanan Masuk (Baru Ditambahkan) */}
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+              <h2 className="text-base font-extrabold text-[#1B2A6B]">Pesanan Masuk Terbaru</h2>
+            </div>
+            
+            <div className="overflow-x-auto">
+              {pesananLoading ? (
+                <div className="p-10 text-center text-gray-500 text-sm">Memuat data pesanan...</div>
+              ) : pesananError ? (
+                <div className="p-10 text-center text-red-500 text-sm">{pesananError}</div>
+              ) : pesananList.length === 0 ? (
+                <div className="p-10 text-center text-gray-500 text-sm">Belum ada pesanan yang masuk.</div>
+              ) : (
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
+                      <th className="p-4 font-bold">Order ID</th>
+                      <th className="p-4 font-bold">Pelanggan</th>
+                      <th className="p-4 font-bold">Total Harga</th>
+                      <th className="p-4 font-bold">Pembayaran</th>
+                      <th className="p-4 font-bold">Pengerjaan</th>
+                      <th className="p-4 font-bold">Tanggal</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-sm divide-y divide-gray-100">
+                    {pesananList.slice(0, 5).map((pesanan) => ( // Tampilkan 5 terbaru saja
+                      <tr key={pesanan.id} className="hover:bg-blue-50/30 transition-colors">
+                        <td className="p-4 font-extrabold text-[#1B2A6B]">#{pesanan.id}</td>
+                        <td className="p-4">
+                          <p className="font-bold text-gray-800">{pesanan.namaUser}</p>
+                        </td>
+                        <td className="p-4 font-bold text-gray-700">Rp {pesanan.totalHarga.toLocaleString("id-ID")}</td>
+                        <td className="p-4">{getPaymentBadge(pesanan.paymentStatus)}</td>
+                        <td className="p-4">
+                          <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                            {pesanan.statusPengerjaan}
+                          </span>
+                        </td>
+                        <td className="p-4 text-xs text-gray-500">
+                          {new Date(pesanan.createdAt).toLocaleDateString("id-ID", { day: 'numeric', month: 'short' })}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+
           {/* Aksi cepat + Panduan setup */}
-          <div className="mt-6 grid lg:grid-cols-3 gap-6">
+          <div className="grid lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 rounded-xl border border-gray-200 bg-white p-6">
               <h3 className="font-semibold text-[#1B2A6B]">Aksi & Pintasan Cepat</h3>
               <p className="text-sm text-gray-500 mt-0.5">Pilih menu di bawah untuk langsung menuju ke halaman pengelolaan data.</p>

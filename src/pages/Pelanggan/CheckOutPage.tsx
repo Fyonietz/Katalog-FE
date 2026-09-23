@@ -4,14 +4,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { getCart, getCartTotal, clearCart } from "../../services/cartService";
 import { getAlamatUser, type AlamatGetResponse } from "../../services/alamatService";
 import { createPesanan } from "../../services/pesananService";
-import { createPaymentSnap } from "../../services/paymentService";
 import type { CartItem } from "../../models/CartItem";
-
-declare global {
-  interface Window {
-    snap: any;
-  }
-}
 
 export default function CheckOutPage() {
   const navigate = useNavigate();
@@ -45,7 +38,13 @@ export default function CheckOutPage() {
 
   const subTotal = getCartTotal(cartItems);
 
-  const handlePayment = async () => {
+  const handleFileUpload = (index: number, file: File | null) => {
+    const updatedCart = [...cartItems];
+    updatedCart[index].desainFile = file;
+    setCartItems(updatedCart);
+  };
+
+  const handleBuatPesanan = async () => {
     if (!selectedAlamatId) {
       alert("Harap pilih alamat pengiriman terlebih dahulu.");
       return;
@@ -53,16 +52,14 @@ export default function CheckOutPage() {
     setIsProcessing(true);
 
     try {
-      // 1. Buat Pesanan dengan FormData secara presisi sesuai dokumentasi backend
+      // 1. Rakit Form Data
       const form = new FormData();
       form.append("idAlamat", String(selectedAlamatId));
 
       cartItems.forEach((item, index) => {
-        // Field Wajib
         form.append(`items[${index}].idProduct`, String(item.produk.id));
         form.append(`items[${index}].qty`, String(item.qty));
         
-        // Field Opsional
         if (item.idUkuranProduk) {
           form.append(`items[${index}].idUkuranProduk`, String(item.idUkuranProduk));
         }
@@ -76,50 +73,22 @@ export default function CheckOutPage() {
           form.append(`items[${index}].desainText`, item.desainText);
         }
         if (item.desainFile instanceof File) {
-          // File langsung dimasukkan ke FormData. File name akan di-handle browser otomatis.
           form.append(`items[${index}].desain`, item.desainFile);
         }
       });
 
-      const pesanan = await createPesanan(form);
+      // 2. Kirim pesanan ke backend TANPA memanggil Midtrans
+      await createPesanan(form);
       
-      // 2. Minta Token Pembayaran Snap
-      const paymentData = await createPaymentSnap(pesanan.id);
-
-      if (!paymentData.snapToken) {
-        throw new Error("Token Midtrans gagal dimuat dari server.");
-      }
-
-      // 3. Buka Popup Midtrans
-      if (window.snap) {
-        window.snap.pay(paymentData.snapToken, {
-          onSuccess: function () {
-            clearCart(); 
-            navigate('/dashboard/pelanggan/pesanan'); 
-          },
-          onPending: function () {
-            clearCart(); 
-            navigate('/dashboard/pelanggan/pesanan');
-          },
-          onError: function () {
-            alert("Pembayaran gagal diproses oleh sistem.");
-            setIsProcessing(false);
-          },
-          onClose: function () {
-            alert("Anda menutup pembayaran. Pesanan tersimpan di menu Pesanan Saya.");
-            clearCart();
-            navigate('/dashboard/pelanggan/pesanan');
-          }
-        });
-      } else if (paymentData.redirectUrl) {
-         clearCart();
-         window.location.href = paymentData.redirectUrl;
-      } else {
-         throw new Error("Sistem Midtrans sedang tidak tersedia.");
-      }
+      // 3. Bersihkan keranjang dan pindah ke halaman pesanan
+      clearCart();
+      // Pesan ini membantu UX agar pengguna mengerti mereka harus membayar di halaman selanjutnya
+      alert("Pesanan berhasil dibuat! Silakan periksa kembali detail pesanan Anda sebelum melakukan pembayaran.");
+      navigate('/dashboard/pelanggan/pesanan'); 
+      
     } catch (error: any) {
       console.error("Error Checkout:", error);
-      alert(error.message || "Terjadi kesalahan sistem. Coba lagi.");
+      alert(error.message || "Terjadi kesalahan sistem saat membuat pesanan.");
       setIsProcessing(false);
     }
   };
@@ -131,11 +100,12 @@ export default function CheckOutPage() {
           &larr; Kembali ke Keranjang
         </Link>
         <h1 className="text-xl md:text-2xl font-extrabold text-[#1B2A6B]">Checkout Pesanan</h1>
-        <p className="text-xs md:text-sm text-gray-500 mt-1">Selesaikan pembayaran untuk memproses pesanan Anda.</p>
+        <p className="text-xs md:text-sm text-gray-500 mt-1">Selesaikan pembuatan pesanan Anda.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
+          
           <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
             <h2 className="text-sm font-extrabold text-[#1B2A6B] mb-4">Pilih Alamat Pengiriman</h2>
             {loadingAlamat ? (
@@ -166,21 +136,35 @@ export default function CheckOutPage() {
             <h2 className="text-sm font-extrabold text-[#1B2A6B] mb-4">Review Pesanan Anda</h2>
             <div className="space-y-4">
               {cartItems.map((item, idx) => (
-                <div key={`${item.produk.id}-${idx}`} className="flex items-center gap-4 py-3 border-b border-gray-50 last:border-0 last:pb-0">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-extrabold text-[#1B2A6B] truncate">{item.produk.nama}</h3>
-                    
-                    {/* Render Detail Kustomisasi jika ada */}
-                    <div className="text-[10px] text-gray-500 mt-1 space-y-0.5">
-                      {item.ukuranCustom && <p>Ukuran: {item.ukuranCustom}</p>}
-                      {item.notes && <p>Catatan: {item.notes}</p>}
-                      {item.desainText && <p>Teks: {item.desainText}</p>}
-                      {item.desainFile && <p className="text-blue-500 font-medium">1 File terlampir</p>}
-                    </div>
+                <div key={`${item.produk.id}-${idx}`} className="flex flex-col gap-3 py-4 border-b border-gray-50 last:border-0 last:pb-0">
+                  
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm font-extrabold text-[#1B2A6B] truncate">{item.produk.nama}</h3>
+                      
+                      <div className="text-[10px] text-gray-500 mt-1 space-y-0.5">
+                        {item.ukuranCustom && <p>Ukuran: <span className="font-semibold text-gray-700">{item.ukuranCustom}</span></p>}
+                        {item.notes && <p>Catatan: <span className="font-semibold text-gray-700">{item.notes}</span></p>}
+                        {item.desainText && <p>Teks Desain: <span className="font-semibold text-gray-700">{item.desainText}</span></p>}
+                      </div>
 
-                    <p className="text-xs font-bold text-gray-500 mt-2">{item.qty} x Rp {(item.produk.harga ?? 0).toLocaleString("id-ID")}</p>
+                      <p className="text-xs font-bold text-gray-500 mt-2">{item.qty} x Rp {(item.produk.harga ?? 0).toLocaleString("id-ID")}</p>
+                    </div>
+                    <div className="text-sm font-extrabold text-[#1B2A6B]">
+                      Rp {((item.produk.harga ?? 0) * item.qty).toLocaleString("id-ID")}
+                    </div>
                   </div>
-                  <div className="text-sm font-extrabold text-[#1B2A6B]">Rp {((item.produk.harga ?? 0) * item.qty).toLocaleString("id-ID")}</div>
+
+                  <div className="mt-1 bg-blue-50/50 p-3 rounded-xl border border-blue-100 border-dashed flex flex-col gap-1.5">
+                    <label className="block text-[11px] font-bold text-[#1B2A6B]">Upload File Desain (Jika Ada)</label>
+                    <input
+                      type="file"
+                      onChange={(e) => handleFileUpload(idx, e.target.files ? e.target.files[0] : null)}
+                      className="w-full text-[11px] text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-[#2E9DF7] file:text-white hover:file:bg-[#1B2A6B] transition-colors cursor-pointer"
+                    />
+                    <p className="text-[9px] text-gray-400">*Format disarankan: JPG, PNG, PDF. (Max 10MB)</p>
+                  </div>
+
                 </div>
               ))}
             </div>
@@ -188,7 +172,7 @@ export default function CheckOutPage() {
         </div>
 
         <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm h-fit space-y-5 sticky top-24">
-          <h2 className="text-base font-extrabold text-[#1B2A6B]">Ringkasan Pembayaran</h2>
+          <h2 className="text-base font-extrabold text-[#1B2A6B]">Ringkasan Total</h2>
           <div className="space-y-3 text-xs">
             <div className="flex justify-between text-gray-500">
               <span>Subtotal Item</span>
@@ -196,11 +180,15 @@ export default function CheckOutPage() {
             </div>
           </div>
           <div className="border-t border-gray-100 pt-4 flex justify-between items-center">
-            <span className="text-sm font-extrabold text-[#1B2A6B]">Estimasi Bayar</span>
+            <span className="text-sm font-extrabold text-[#1B2A6B]">Total</span>
             <span className="text-lg font-extrabold text-[#2E9DF7]">Rp {subTotal.toLocaleString("id-ID")}</span>
           </div>
-          <button onClick={handlePayment} disabled={isProcessing || !selectedAlamatId || cartItems.length === 0} className="w-full bg-[#1B2A6B] hover:bg-[#111A42] disabled:bg-gray-400 text-white py-3.5 rounded-xl text-xs font-bold shadow-md transition-all flex justify-center items-center gap-2">
-            {isProcessing ? "Menyiapkan Pembayaran..." : "Bayar Sekarang"}
+          <button 
+            onClick={handleBuatPesanan} 
+            disabled={isProcessing || !selectedAlamatId || cartItems.length === 0} 
+            className="w-full bg-[#1B2A6B] hover:bg-[#111A42] disabled:bg-gray-400 text-white py-3.5 rounded-xl text-xs font-bold shadow-md transition-all flex justify-center items-center gap-2"
+          >
+            {isProcessing ? "Menyiapkan Pesanan..." : "Buat Pesanan"}
           </button>
         </div>
       </div>
