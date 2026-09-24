@@ -1,4 +1,5 @@
 // src/pages/Admin/DashboardMain.tsx
+import { useEffect } from "react";
 import {
   ShieldCheck,
   ShoppingCart,
@@ -11,7 +12,6 @@ import {
   Clock,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import AdminSidebar from "../../components/layout/AdminSidebar";
 import StatCard from "../../components/StatCard";
 import QuickActionCard from "../../components/QuickActionCard";
 import { useDashboardAdminController } from "../../hooks/useDashboardAdminController";
@@ -32,8 +32,23 @@ function formatJam(iso: string | null): string {
 
 export default function DashboardMain() {
   const navigate = useNavigate();
-  const { stats, pesanan, salesSummary, salesPeriod, updatedAt, loading, error, nama } =
+  
+  // Pastikan hook Anda me-return fungsi `refetch` atau `fetchData`
+  const { stats, pesanan, salesSummary, salesPeriod, updatedAt, loading, error, nama, refetch } =
     useDashboardAdminController();
+
+  // --- IMPLEMENTASI REAL-TIME POLLING (7 DETIK) ---
+  useEffect(() => {
+    // Jalankan interval hanya jika fungsi refetch tersedia
+    if (typeof refetch === 'function') {
+      const intervalId = setInterval(() => {
+        refetch(); // Memanggil ulang API setiap 7 detik
+      }, 15000);
+
+      // Bersihkan interval saat user pindah halaman agar memori tidak bocor
+      return () => clearInterval(intervalId);
+    }
+  }, [refetch]);
 
   const getPaymentBadge = (status: string) => {
     switch (status.toLowerCase()) {
@@ -48,18 +63,19 @@ export default function DashboardMain() {
   };
 
   return (
-<div className="flex-1 flex flex-col min-w-0 h-full bg-[#F4F6FB]">
-
-      <div className="flex-1 overflow-y-auto">
+    <div className="flex-1 flex flex-col min-w-0 h-full bg-[#F4F6FB]">
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        
         {/* Topbar */}
         <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-8 py-4">
           <h1 className="text-lg font-bold text-[#1B2A6B]">Dashboard</h1>
         </div>
 
-        <div className="p-8 max-w-7xl mx-auto space-y-6">
+        <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
+          
           {/* Hero banner */}
-          <div className="relative overflow-hidden rounded-2xl bg-[#1B2A6B] p-8 text-white">
-            <div className="relative flex items-center justify-between gap-6 flex-wrap">
+          <div className="relative overflow-hidden rounded-2xl bg-[#1B2A6B] p-8 text-white shadow-md">
+            <div className="relative flex items-center justify-between gap-6 flex-wrap z-10">
               <div>
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-[#AEB9E0]">
                   <ShieldCheck className="h-3.5 w-3.5" />
@@ -71,11 +87,12 @@ export default function DashboardMain() {
                 </p>
               </div>
 
-              <div className="rounded-xl bg-white/10 px-4 py-3 text-right">
+              <div className="rounded-xl bg-white/10 px-4 py-3 text-right backdrop-blur-sm border border-white/5">
                 <p className="text-[10px] uppercase tracking-wide text-[#AEB9E0]">Data Diperbarui</p>
                 <p className="mt-1 flex items-center gap-1.5 text-sm font-semibold">
-                  <span className="h-2 w-2 rounded-full bg-green-400" />
-                  {loading ? "Memuat..." : `Pukul ${formatJam(updatedAt)} WIB`}
+                  <span className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
+                  {/* Dibuat tidak berkedip "Memuat..." saat interval berjalan untuk UX yang lebih baik */}
+                  Pukul {formatJam(updatedAt)} WIB
                 </p>
               </div>
             </div>
@@ -88,7 +105,7 @@ export default function DashboardMain() {
               icon={Package}
               label="Total Produk"
               value={stats?.totalProduk ?? 0}
-              loading={loading}
+              loading={loading && !stats} // Hindari flickering saat interval berjalan
               actionLabel="Kelola"
               onAction={() => navigate("/dashboard/admin/produk/daftar")}
             />
@@ -96,7 +113,7 @@ export default function DashboardMain() {
               icon={ShoppingCart}
               label="Total Pesanan"
               value={stats?.totalPesanan ?? 0}
-              loading={loading}
+              loading={loading && !stats}
               actionLabel="Kelola"
               onAction={() => navigate("/dashboard/admin/pesanan")}
             />
@@ -104,20 +121,20 @@ export default function DashboardMain() {
               icon={Users}
               label="Total Pelanggan"
               value={stats?.totalPelanggan ?? 0}
-              loading={loading}
+              loading={loading && !stats}
             />
             <StatCard
               icon={Clock}
               label="Pesanan Pending"
               value={stats?.pesananPending ?? 0}
-              loading={loading}
+              loading={loading && !stats}
               hint="Belum dibayar"
             />
             <StatCard
               icon={Banknote}
               label="Pendapatan Bulan Ini"
               value={stats?.totalPendapatan ?? 0}
-              loading={loading}
+              loading={loading && !stats}
               format={rupiah}
               hint={
                 salesSummary
@@ -130,29 +147,29 @@ export default function DashboardMain() {
           </div>
 
           {/* Tabel Pesanan Masuk */}
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
             <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
               <h2 className="text-base font-extrabold text-[#1B2A6B]">Pesanan Masuk Terbaru</h2>
               <button
                 onClick={() => navigate("/dashboard/admin/pesanan")}
-                className="flex items-center gap-1 text-xs font-bold text-[#2E9DF7] hover:text-[#1B2A6B]"
+                className="flex items-center gap-1 text-xs font-bold text-[#2E9DF7] hover:text-[#1B2A6B] transition-colors"
               >
                 Lihat Semua
                 <ArrowRight className="h-3 w-3" />
               </button>
             </div>
 
-            <div className="overflow-x-auto">
-              {loading ? (
-                <div className="p-10 text-center text-gray-500 text-sm">Memuat data pesanan...</div>
+            <div className="overflow-x-auto relative">
+              {loading && pesanan.length === 0 ? (
+                <div className="p-10 text-center text-gray-500 text-sm font-bold">Memuat data pesanan...</div>
               ) : error ? (
-                <div className="p-10 text-center text-red-500 text-sm">{error}</div>
+                <div className="p-10 text-center text-red-500 text-sm font-bold">{error}</div>
               ) : pesanan.length === 0 ? (
-                <div className="p-10 text-center text-gray-500 text-sm">Belum ada pesanan yang masuk.</div>
+                <div className="p-10 text-center text-gray-500 text-sm font-bold">Belum ada pesanan yang masuk.</div>
               ) : (
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
+                    <tr className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider border-b border-gray-100">
                       <th className="p-4 font-bold">Order ID</th>
                       <th className="p-4 font-bold">Pelanggan</th>
                       <th className="p-4 font-bold">Total Harga</th>
@@ -163,19 +180,19 @@ export default function DashboardMain() {
                   </thead>
                   <tbody className="text-sm divide-y divide-gray-100">
                     {pesanan.slice(0, 5).map((item) => (
-                      <tr key={item.id} className="hover:bg-blue-50/30 transition-colors">
-                        <td className="p-4 font-extrabold text-[#1B2A6B]">#{item.id}</td>
+                      <tr key={item.id} className="hover:bg-blue-50/50 transition-colors">
+                        <td className="p-4 font-black text-[#1B2A6B]">#{item.id}</td>
                         <td className="p-4">
                           <p className="font-bold text-gray-800">{item.namaUser}</p>
                         </td>
-                        <td className="p-4 font-bold text-gray-700">{rupiah(item.totalHarga)}</td>
+                        <td className="p-4 font-black text-[#2E9DF7]">{rupiah(item.totalHarga)}</td>
                         <td className="p-4">{getPaymentBadge(item.paymentStatus)}</td>
                         <td className="p-4">
-                          <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                          <span className="text-[10px] font-extrabold uppercase text-blue-600 bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-md shadow-sm">
                             {item.statusPengerjaan}
                           </span>
                         </td>
-                        <td className="p-4 text-xs text-gray-500">
+                        <td className="p-4 text-xs font-semibold text-gray-500">
                           {new Date(item.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}
                         </td>
                       </tr>
@@ -186,89 +203,9 @@ export default function DashboardMain() {
             </div>
           </div>
 
-          {/* Aksi cepat + Panduan setup */}
-          <div className="grid lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 rounded-xl border border-gray-200 bg-white p-6">
-              <h3 className="font-semibold text-[#1B2A6B]">Aksi & Pintasan Cepat</h3>
-              <p className="text-sm text-gray-500 mt-0.5">Pilih menu di bawah untuk langsung menuju ke halaman pengelolaan data.</p>
-
-              <div className="mt-4 grid sm:grid-cols-2 gap-3">
-                <QuickActionCard
-                  icon={Package}
-                  title="Manajemen Produk"
-                  description="Tambah produk atau import Excel"
-                  to="/dashboard/admin/produk/daftar"
-                />
-                <QuickActionCard
-                  icon={Tags}
-                  title="Kategori Produk"
-                  description="Kelola kategori katalog"
-                  to="/dashboard/admin/produk/kategori"
-                />
-                <QuickActionCard
-                  icon={ShoppingCart}
-                  title="Pesanan"
-                  description="Pantau dan proses pesanan masuk"
-                  to="/dashboard/admin/pesanan"
-                />
-                <QuickActionCard
-                  icon={Users}
-                  title="Pelanggan"
-                  description="Kelola data pelanggan"
-                  to="/dashboard/admin/pelanggan"
-                />
-              </div>
-            </div>
-
-            {/* Panduan setup */}
-            <div className="rounded-xl border border-gray-200 bg-white p-6 flex flex-col">
-              <div className="flex items-center gap-2">
-                <div className="h-7 w-7 rounded-lg bg-[#EAF2FE] flex items-center justify-center">
-                  <CheckCircle2 className="h-4 w-4 text-[#2E9DF7]" />
-                </div>
-                <h3 className="font-semibold text-[#1B2A6B]">Panduan Setup Katalog</h3>
-              </div>
-              <div className="mt-1 flex flex-wrap items-center gap-1 text-xs text-gray-400">
-                <span>Urutan:</span>
-                {SETUP_STEPS.map((step, index) => (
-                  <span key={step.label} className="flex items-center gap-1">
-                    {step.label}
-                    {index < SETUP_STEPS.length - 1 && <ArrowRight className="h-3 w-3" />}
-                  </span>
-                ))}
-              </div>
-
-              <div className="mt-4 flex flex-col gap-2">
-                {SETUP_STEPS.map((step) => (
-                  <div
-                    key={step.label}
-                    className="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2.5"
-                  >
-                    <span className="flex items-center gap-2 text-sm text-gray-700">
-                      <span
-                        className={`flex h-5 w-5 items-center justify-center rounded-full ${
-                          step.done ? "bg-green-500" : "bg-gray-200"
-                        }`}
-                      >
-                        {step.done && <CheckCircle2 className="h-3.5 w-3.5 text-white" />}
-                      </span>
-                      {step.label}
-                    </span>
-                    <span
-                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                        step.done ? "bg-green-50 text-green-600" : "bg-gray-100 text-gray-400"
-                      }`}
-                    >
-                      {step.done ? "Selesai" : "Belum"}
-                    </span>
-                  </div>
-                ))}
-              </div>
 
             </div>
           </div>
         </div>
-      </div>
-    </div>
   );
 }
