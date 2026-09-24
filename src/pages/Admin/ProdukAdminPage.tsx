@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import AdminSidebar from "../../components/layout/AdminSidebar";
 import DataTable from "../../components/ui/DataTable";
 import { produkColumns } from "../../config/produkColumns";
-import { getProdukList, createProduct, updateProduct } from "../../services/produkService";
+import { getProdukList, createProduct, updateProduct, deleteProduct } from "../../services/produkService";
 import { getKategoriList, type KategoriProduct } from "../../services/kategoriService";
 import { getStatusList, type StatusProduct } from "../../services/statusService";
 import { showModal } from "../../lib/showModal";
@@ -14,6 +14,10 @@ export default function ProdukAdminPage() {
   const [kategoriOptions, setKategoriOptions] = useState<KategoriProduct[]>([]);
   const [statusOptions, setStatusOptions] = useState<StatusProduct[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+
+  // State Filter & Pencarian
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState<string>("Semua");
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
@@ -29,7 +33,6 @@ export default function ProdukAdminPage() {
   const [backgroundColor, setBackgroundColor] = useState<string>("#FFFFFF");
   const [imageFile, setImageFile] = useState<File | null>(null);
 
-  // Load Data Produk, Kategori, dan Status
   const loadInitialData = async () => {
     try {
       setLoading(true);
@@ -43,13 +46,8 @@ export default function ProdukAdminPage() {
       setKategoriOptions(dataKategori);
       setStatusOptions(dataStatus);
 
-      // Default value dropdown jika ada data
-      if (dataKategori.length > 0 && !idKategoriProduct) {
-        setIdKategoriProduct(dataKategori[0].id);
-      }
-      if (dataStatus.length > 0 && !idStatusProduct) {
-        setIdStatusProduct(dataStatus[0].id);
-      }
+      if (dataKategori.length > 0 && !idKategoriProduct) setIdKategoriProduct(dataKategori[0].id);
+      if (dataStatus.length > 0 && !idStatusProduct) setIdStatusProduct(dataStatus[0].id);
     } catch (err) {
       console.error("Gagal memuat data admin:", err);
     } finally {
@@ -61,20 +59,32 @@ export default function ProdukAdminPage() {
     loadInitialData();
   }, []);
 
-  // Buka Modal Tambah Produk
+  // --- LOGIKA FILTERING ---
+  // Buat Tab secara dinamis berdasarkan master data kategori
+  const TABS = ["Semua", ...Array.from(new Set(kategoriOptions.map(k => k.nama)))];
+
+  const finalProdukList = produkList.filter(produk => {
+    // Filter Pencarian
+    const searchLower = searchQuery.toLowerCase();
+    const matchSearch = 
+      (produk.nama?.toLowerCase() || "").includes(searchLower) ||
+      (produk.deskripsi?.toLowerCase() || "").includes(searchLower);
+
+    // Filter Tab Kategori
+    const matchTab = activeTab === "Semua" || produk.kategoryProduct?.nama?.toLowerCase() === activeTab.toLowerCase();
+
+    return matchSearch && matchTab;
+  });
+
+  // --- HANDLER MODAL & SUBMIT ---
   const handleOpenCreateModal = () => {
     setEditingProduk(null);
-    setNama("");
-    setDeskripsi("");
-    setHarga("");
-    setBackgroundColor("#FFFFFF");
-    setImageFile(null);
+    setNama(""); setDeskripsi(""); setHarga(""); setBackgroundColor("#FFFFFF"); setImageFile(null);
     if (kategoriOptions.length > 0) setIdKategoriProduct(kategoriOptions[0].id);
     if (statusOptions.length > 0) setIdStatusProduct(statusOptions[0].id);
     setIsModalOpen(true);
   };
 
-  // Buka Modal Edit Produk
   const handleOpenEditModal = (produk: Produk) => {
     setEditingProduk(produk);
     setNama(produk.nama ?? "");
@@ -87,55 +97,71 @@ export default function ProdukAdminPage() {
     setIsModalOpen(true);
   };
 
-  // Submit Handler (Create / Edit)
+  const handleDeleteProduct = async (id: number) => {
+    if (!confirm("Apakah Anda yakin ingin menghapus produk ini? Data yang dihapus tidak dapat dikembalikan.")) return;
+    try {
+      await deleteProduct(id);
+      showModal("Produk berhasil dihapus!");
+      loadInitialData();
+    } catch (err: any) {
+      showModal(err.message || "Gagal menghapus produk.");
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       setSubmitting(true);
 
-      const formData = new FormData();
-      formData.append("IdKategoriProduct", idKategoriProduct.toString());
-      formData.append("IdStatusProduct", idStatusProduct.toString());
-      formData.append("Nama", nama);
-      formData.append("Deskripsi", deskripsi);
-      formData.append("Harga", harga);
-      formData.append("BackgroundColor", backgroundColor);
-      
-      if (imageFile) {
-        formData.append("Image", imageFile);
-      }
-
       if (editingProduk) {
-        // Panggil endpoint PATCH jika sedang mode edit
-        await updateProduct(editingProduk.id, formData);
+        // UPDATE: Gunakan JSON sesuai dokumentasi API[cite: 2, 4]
+        const payloadJson = {
+          idKategoriProduct: Number(idKategoriProduct),
+          idStatusProduct: Number(idStatusProduct),
+          nama,
+          deskripsi,
+          harga: Number(harga),
+          backgroundColor,
+          imagePath: editingProduk.imagePath
+        };
+        
+        await updateProduct(editingProduk.id, payloadJson);
         showModal("Produk berhasil diperbarui!");
       } else {
-        // Panggil endpoint POST jika mode tambah
+        // CREATE: Gunakan FormData karena ada upload file[cite: 4]
+        const formData = new FormData();
+        formData.append("IdKategoriProduct", idKategoriProduct.toString());
+        formData.append("IdStatusProduct", idStatusProduct.toString());
+        formData.append("Nama", nama);
+        formData.append("Deskripsi", deskripsi);
+        formData.append("Harga", harga);
+        formData.append("BackgroundColor", backgroundColor);
+        if (imageFile) formData.append("Image", imageFile);
+
         await createProduct(formData);
         showModal("Produk berhasil ditambahkan!");
       }
 
       setIsModalOpen(false);
-      loadInitialData(); // Reload data tabel
+      loadInitialData(); 
     } catch (err: any) {
-      console.error("Gagal menyimpan produk:", err);
-      showModal(err.response?.data?.detail || "Gagal menyimpan produk. Periksa kembali form data Anda.");
+      showModal(err.message || err.response?.data?.detail || "Gagal menyimpan produk.");
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="flex h-screen bg-[#F4F6FB]">
+    <div className="flex h-screen bg-[#F4F6FB] overflow-hidden">
       <AdminSidebar />
 
-      <div className="flex-1 overflow-y-auto p-8">
-        <div className="flex items-center justify-between mb-6">
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Topbar (Tetap di atas) */}
+        <div className="shrink-0 bg-white border-b border-gray-200 px-8 py-4 flex justify-between items-center z-10">
           <div>
-            <h1 className="text-xl font-extrabold text-[#1B2A6B]">Daftar Produk</h1>
-            <p className="text-sm text-gray-500 mt-0.5">Kelola produk yang tampil di katalog.</p>
+            <h1 className="text-lg font-bold text-[#1B2A6B]">Katalog Produk</h1>
+            <p className="text-xs text-gray-500">Kelola dan tambah produk yang tampil di toko Anda.</p>
           </div>
-
           <button
             onClick={handleOpenCreateModal}
             className="flex items-center gap-2 bg-[#1B2A6B] hover:bg-[#111A42] text-white text-sm font-bold px-4 py-2.5 rounded-xl shadow-md transition-all"
@@ -147,21 +173,80 @@ export default function ProdukAdminPage() {
           </button>
         </div>
 
-        <DataTable
-          columns={produkColumns}
-          data={produkList}
-          getRowId={(row, index) => row.id?.toString() ?? `produk-${index}`}
-          isLoading={loading}
-          onEdit={(row) => handleOpenEditModal(row)}
-          onDelete={(row) => console.log("Hapus produk:", row.id)}
-        />
+        {/* Konten Utama - Flex Column pembatas Tinggi */}
+        <div className="flex-1 flex flex-col p-4 md:p-6 overflow-hidden">
+          <div className="max-w-7xl mx-auto w-full h-full flex flex-col space-y-4">
+            
+            {/* Alat Filter & Pencarian */}
+            <div className="shrink-0 space-y-3">
+              <div className="relative w-full sm:max-w-md">
+                <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                  </svg>
+                </span>
+                <input
+                  type="text"
+                  placeholder="Cari nama produk atau deskripsi..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2.5 text-sm rounded-xl border border-gray-200 outline-none focus:border-[#2E9DF7] focus:ring-1 focus:ring-[#2E9DF7] transition-all shadow-sm"
+                />
+              </div>
+
+              {/* TABS NAVIGASI KATEGORI */}
+              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                {TABS.map((tab) => {
+                  const count = tab === "Semua" 
+                    ? produkList.length 
+                    : produkList.filter(p => p.kategoryProduct?.nama?.toLowerCase() === tab.toLowerCase()).length;
+
+                  return (
+                    <button
+                      key={tab}
+                      onClick={() => setActiveTab(tab)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap border ${
+                        activeTab === tab 
+                          ? "bg-[#1B2A6B] text-white border-[#1B2A6B] shadow-md" 
+                          : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"
+                      }`}
+                    >
+                      {tab}
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] ${
+                        activeTab === tab ? "bg-white/20 text-white" : "bg-gray-100 text-gray-600"
+                      }`}>
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            
+            {/* TABEL INNER SCROLL */}
+            <div className="flex-1 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col relative">
+               {/* Asumsi: Komponen DataTable Anda sudah memiliki wrapper overflow internal atau setidaknya akan mengisi flex-1 ini secara aman */}
+               <div className="flex-1 overflow-y-auto">
+                 <DataTable
+                   columns={produkColumns}
+                   data={finalProdukList}
+                   getRowId={(row, index) => row.id?.toString() ?? `produk-${index}`}
+                   isLoading={loading}
+                   onEdit={(row) => handleOpenEditModal(row)}
+                   onDelete={(row) => handleDeleteProduct(row.id)}
+                 />
+               </div>
+            </div>
+
+          </div>
+        </div>
       </div>
 
       {/* --- MODAL FORM TAMBAH / EDIT PRODUK --- */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]">
+            <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50 shrink-0">
               <h3 className="font-extrabold text-[#1B2A6B]">
                 {editingProduk ? "Edit Produk" : "Tambah Produk Baru"}
               </h3>
@@ -173,8 +258,7 @@ export default function ProdukAdminPage() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
-              {/* Nama Produk */}
+            <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1">Nama Produk</label>
                 <input
@@ -187,7 +271,6 @@ export default function ProdukAdminPage() {
                 />
               </div>
 
-              {/* Dropdown Kategori & Status */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">Kategori</label>
@@ -201,9 +284,7 @@ export default function ProdukAdminPage() {
                       <option value="">Memuat kategori...</option>
                     ) : (
                       kategoriOptions.map((kat) => (
-                        <option key={kat.id} value={kat.id}>
-                          {kat.nama}
-                        </option>
+                        <option key={kat.id} value={kat.id}>{kat.nama}</option>
                       ))
                     )}
                   </select>
@@ -221,16 +302,13 @@ export default function ProdukAdminPage() {
                       <option value="">Memuat status...</option>
                     ) : (
                       statusOptions.map((st) => (
-                        <option key={st.id} value={st.id}>
-                          {st.nama}
-                        </option>
+                        <option key={st.id} value={st.id}>{st.nama}</option>
                       ))
                     )}
                   </select>
                 </div>
               </div>
 
-              {/* Harga */}
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1">Harga (Rp)</label>
                 <input
@@ -243,7 +321,6 @@ export default function ProdukAdminPage() {
                 />
               </div>
 
-              {/* Deskripsi */}
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1">Deskripsi</label>
                 <textarea
@@ -255,20 +332,29 @@ export default function ProdukAdminPage() {
                 />
               </div>
 
-              {/* Upload Gambar */}
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
-                  Gambar Produk {editingProduk && "(Kosongkan jika tidak ingin mengubah)"}
-                </label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-                  className="w-full text-xs text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-[#2E9DF7] hover:file:bg-blue-100"
-                />
-              </div>
+              {!editingProduk && (
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Gambar Produk
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+                    className="w-full text-xs text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-[#2E9DF7] hover:file:bg-blue-100"
+                  />
+                  <p className="text-[10px] text-gray-400 mt-1">*Gambar wajib diisi untuk produk baru.</p>
+                </div>
+              )}
 
-              {/* Action Buttons */}
+              {editingProduk && (
+                <div className="bg-amber-50 p-3 rounded-xl border border-amber-100">
+                  <p className="text-[10px] text-amber-700 font-medium leading-relaxed">
+                    ⚠️ Mode Edit: Pengubahan gambar produk saat ini tidak didukung melalui form edit (menggunakan JSON). Gambar lama Anda akan tetap dipertahankan dengan aman di server.
+                  </p>
+                </div>
+              )}
+
               <div className="pt-4 flex gap-3">
                 <button
                   type="button"
@@ -279,8 +365,8 @@ export default function ProdukAdminPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={submitting}
-                  className="flex-1 py-2.5 rounded-xl bg-[#1B2A6B] text-xs font-bold text-white hover:bg-[#111A42] transition-colors disabled:opacity-50"
+                  disabled={submitting || (!editingProduk && !imageFile)}
+                  className="flex-1 py-2.5 rounded-xl bg-[#1B2A6B] text-xs font-bold text-white hover:bg-[#111A42] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {submitting ? "Menyimpan..." : editingProduk ? "Perbarui Produk" : "Simpan Produk"}
                 </button>

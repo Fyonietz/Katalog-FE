@@ -27,6 +27,5 @@ export const sidebarItems: SidebarItem[] = [
     ],
   },
   { label: "Pesanan", path: "/dashboard/admin/pesanan", icon: ShoppingCart },
-  { label: "Pelanggan", path: "/admin/dashboard/pelanggan", icon: Users },
-  { label: "Laporan Penjualan", path: "/admin/dashboard/laporan", icon: BarChart3 },
+  { label: "Laporan Penjualan", path: "/dashboard/admin/report", icon: BarChart3 },
 ];

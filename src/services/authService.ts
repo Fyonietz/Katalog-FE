@@ -7,6 +7,7 @@ const api = axios.create({
   withCredentials: true,
 });
 
+export const getAuthToken = () => localStorage.getItem("token") || "";
 // Request Interceptor: Otomatis menyematkan Bearer Token dari localStorage
 api.interceptors.request.use(
   (config) => {

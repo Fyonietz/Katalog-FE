@@ -6,6 +6,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import DashboardAdminPage from "./pages/Admin/DashboardMain";
 import ProdukAdmin from "./pages/Admin/ProdukAdminPage";
 import PesananAdminPage from "./pages/Admin/PesananAdminPage";
+import LaporanAdminPage from "./pages/Admin/LaporanAdminPage";
 import KategoriProdukAdmin from "./pages/Admin/KategoriProdukAdminPage";
 import CustomerLayout from "./pages/Pelanggan/CustomerLayout";
 import KeranjangPage from "./pages/Pelanggan/KeranjangPage";
@@ -52,6 +53,15 @@ function App() {
         element={
           <ProtectedRoute allowedRoles={["Admin", "Petugas"]}>
             <PesananAdminPage />
+          </ProtectedRoute>
+        }
+      />
+
+ <Route
+        path="/dashboard/admin/report"
+        element={
+          <ProtectedRoute allowedRoles={["Admin", "Petugas"]}>
+            <LaporanAdminPage />
           </ProtectedRoute>
         }
       />

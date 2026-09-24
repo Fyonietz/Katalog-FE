@@ -100,3 +100,20 @@ export async function getAllPesanan(): Promise<PesananResponse[]> {
   }
   return res.json();
 }
+
+ export async function updateStatusPengerjaan(idPesanan: number, idStatusPengerjaan: number): Promise<PesananResponse> {
+  const res = await fetch(`${API_URL}/api/v1/pesanan/${idPesanan}/status`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${getAuthToken()}`,
+    },
+    body: JSON.stringify({ idStatusPengerjaan }),
+  });
+  
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(errorData.message || "Gagal mengubah status pengerjaan");
+  }
+  return res.json();
+}
