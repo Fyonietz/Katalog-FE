@@ -10,7 +10,8 @@ import {
   deleteKategori,
   type KategoriProduct,
 } from "../../services/kategoriService";
-import { showModal } from "../../lib/showModal";
+import { showModal, showConfirm } from "../../lib/showModal";
+import { X } from "lucide-react";
 
 export default function KategoriProdukAdminPage() {
   const [kategoriList, setKategoriList] = useState<KategoriProduct[]>([]);
@@ -76,15 +77,19 @@ export default function KategoriProdukAdminPage() {
 
   // Delete Handler
   const handleDelete = async (kategori: KategoriProduct) => {
-    if (confirm(`Apakah Anda yakin ingin menghapus kategori "${kategori.nama}"?`)) {
-      try {
-        await deleteKategori(kategori.id);
-        showModal("Kategori berhasil dihapus!");
-        loadData();
-      } catch (err: any) {
-        console.error("Gagal menghapus kategori:", err);
-        showModal(err.response?.data?.detail || "Gagal menghapus kategori.");
-      }
+    const ok = await showConfirm(
+      `Apakah Anda yakin ingin menghapus kategori "${kategori.nama}"?`,
+      { title: "Hapus Kategori", danger: true, confirmLabel: "Ya, Hapus" }
+    );
+    if (!ok) return;
+
+    try {
+      await deleteKategori(kategori.id);
+      showModal("Kategori berhasil dihapus!", { variant: "success" });
+      loadData();
+    } catch (err: any) {
+      console.error("Gagal menghapus kategori:", err);
+      showModal(err.response?.data?.detail || "Gagal menghapus kategori.", { variant: "error" });
     }
   };
 
@@ -130,9 +135,10 @@ export default function KategoriProdukAdminPage() {
               </h3>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600 p-1 font-bold text-sm"
+                className="text-gray-400 hover:text-gray-600 p-1"
+                aria-label="Tutup"
               >
-                ✕
+                <X className="h-4 w-4" />
               </button>
             </div>
 

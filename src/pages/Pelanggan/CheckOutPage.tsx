@@ -5,6 +5,7 @@ import { getCart, getCartTotal, clearCart } from "../../services/cartService";
 import { getAlamatUser, type AlamatGetResponse } from "../../services/alamatService";
 import { createPesanan } from "../../services/pesananService";
 import type { CartItem } from "../../models/CartItem";
+import { showModal } from "../../lib/showModal";
 
 export default function CheckOutPage() {
   const navigate = useNavigate();
@@ -46,7 +47,7 @@ export default function CheckOutPage() {
 
   const handleBuatPesanan = async () => {
     if (!selectedAlamatId) {
-      alert("Harap pilih alamat pengiriman terlebih dahulu.");
+      showModal("Harap pilih alamat pengiriman terlebih dahulu.", { variant: "warning" });
       return;
     }
     setIsProcessing(true);
@@ -83,12 +84,12 @@ export default function CheckOutPage() {
       // 3. Bersihkan keranjang dan pindah ke halaman pesanan
       clearCart();
       // Pesan ini membantu UX agar pengguna mengerti mereka harus membayar di halaman selanjutnya
-      alert("Pesanan berhasil dibuat! Silakan periksa kembali detail pesanan Anda sebelum melakukan pembayaran.");
+      showModal("Pesanan berhasil dibuat! Silakan periksa kembali detail pesanan Anda sebelum melakukan pembayaran.", { variant: "success" });
       navigate('/dashboard/pelanggan/pesanan'); 
       
     } catch (error: any) {
       console.error("Error Checkout:", error);
-      alert(error.message || "Terjadi kesalahan sistem saat membuat pesanan.");
+      showModal(error.message || "Terjadi kesalahan sistem saat membuat pesanan.", { variant: "error" });
       setIsProcessing(false);
     }
   };

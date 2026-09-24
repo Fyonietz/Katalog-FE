@@ -5,6 +5,7 @@ import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-lea
 import L from "leaflet";
 import { getAddressFromLatLng, createAlamat, updateAlamat, type AlamatGetResponse } from "../services/alamatService";
 import { showModal } from "../lib/showModal";
+import { X } from "lucide-react";
 
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
 import markerIcon from "leaflet/dist/images/marker-icon.png";
@@ -126,7 +127,9 @@ export default function MapPickerModal({ isOpen, onClose, userId, editData, onSu
             </h3>
             <p className="text-xs text-gray-500">Geser & klik peta untuk pinpoint lokasi akurat.</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 font-bold text-sm">✕</button>
+          <button onClick={onClose} aria-label="Tutup" className="text-gray-400 hover:text-gray-600 p-1">
+            <X className="w-4 h-4" />
+          </button>
         </div>
 
         {/* Leaflet Map Area */}

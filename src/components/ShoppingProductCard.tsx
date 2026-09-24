@@ -1,5 +1,6 @@
 // components/ShoppingProductCard.tsx
 import { motion } from "framer-motion";
+import { Minus, Plus } from "lucide-react";
 import type { Produk } from "../models/Produk";
 
 interface ShoppingProductCardProps {
@@ -81,13 +82,17 @@ export default function ShoppingProductCard({
               whileTap={{ scale: 0.9 }}
               onClick={() => onQtyChange(qty - 1)}
               className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold text-gray-500 hover:bg-white hover:text-[#1B2A6B] hover:shadow-sm transition-all"
-            >−</motion.button>
+            >
+              <Minus className="w-3.5 h-3.5" />
+            </motion.button>
             <span className="text-xs font-bold w-6 text-center">{qty}</span>
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={() => onQtyChange(qty + 1)}
               className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold text-gray-500 hover:bg-white hover:text-[#1B2A6B] hover:shadow-sm transition-all"
-            >+</motion.button>
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </motion.button>
           </div>
 
           {/* Tombol Tambah */}

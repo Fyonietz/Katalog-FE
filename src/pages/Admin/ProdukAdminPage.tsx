@@ -6,7 +6,8 @@ import { produkColumns } from "../../config/produkColumns";
 import { getProdukList, createProduct, updateProduct, deleteProduct } from "../../services/produkService";
 import { getKategoriList, type KategoriProduct } from "../../services/kategoriService";
 import { getStatusList, type StatusProduct } from "../../services/statusService";
-import { showModal } from "../../lib/showModal";
+import { showModal, showConfirm } from "../../lib/showModal";
+import { AlertTriangle, X } from "lucide-react";
 import type { Produk } from "../../models/Produk";
 
 export default function ProdukAdminPage() {
@@ -98,7 +99,11 @@ export default function ProdukAdminPage() {
   };
 
   const handleDeleteProduct = async (id: number) => {
-    if (!confirm("Apakah Anda yakin ingin menghapus produk ini? Data yang dihapus tidak dapat dikembalikan.")) return;
+    const ok = await showConfirm(
+      "Apakah Anda yakin ingin menghapus produk ini? Data yang dihapus tidak dapat dikembalikan.",
+      { title: "Hapus Produk", danger: true, confirmLabel: "Ya, Hapus" }
+    );
+    if (!ok) return;
     try {
       await deleteProduct(id);
       showModal("Produk berhasil dihapus!");
@@ -252,9 +257,10 @@ export default function ProdukAdminPage() {
               </h3>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600 p-1 font-bold text-sm"
+                className="text-gray-400 hover:text-gray-600 p-1"
+                aria-label="Tutup"
               >
-                ✕
+                <X className="h-4 w-4" />
               </button>
             </div>
 
@@ -348,9 +354,10 @@ export default function ProdukAdminPage() {
               )}
 
               {editingProduk && (
-                <div className="bg-amber-50 p-3 rounded-xl border border-amber-100">
+                <div className="bg-amber-50 p-3 rounded-xl border border-amber-100 flex items-start gap-2">
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
                   <p className="text-[10px] text-amber-700 font-medium leading-relaxed">
-                    ⚠️ Mode Edit: Pengubahan gambar produk saat ini tidak didukung melalui form edit (menggunakan JSON). Gambar lama Anda akan tetap dipertahankan dengan aman di server.
+                    Mode Edit: Pengubahan gambar produk saat ini tidak didukung melalui form edit (menggunakan JSON). Gambar lama Anda akan tetap dipertahankan dengan aman di server.
                   </p>
                 </div>
               )}

@@ -1,6 +1,7 @@
 // src/components/layout/CustomerSidebar.tsx
 import { NavLink } from "react-router-dom";
 import { motion } from "framer-motion";
+import { ArrowLeft, X } from "lucide-react";
 
 interface CustomerSidebarProps {
   isOpenMobile: boolean;
@@ -88,7 +89,8 @@ export default function CustomerSidebar({
           href="/shopping"
           className="mt-auto flex items-center gap-2 text-xs font-bold text-blue-200 hover:text-white pt-4 border-t border-white/10"
         >
-          ← Kembali ke Katalog
+          <ArrowLeft className="w-4 h-4" />
+          Kembali ke Katalog
         </a>
       </aside>
 
@@ -107,7 +109,13 @@ export default function CustomerSidebar({
                 <div className="w-8 h-8 rounded-lg bg-[#2E9DF7] flex items-center justify-center font-extrabold">N</div>
                 <span className="font-bold text-sm">Portal Pelanggan</span>
               </div>
-              <button onClick={() => setIsOpenMobile(false)} className="p-1 text-white/70 hover:text-white">✕</button>
+              <button
+                onClick={() => setIsOpenMobile(false)}
+                aria-label="Tutup menu"
+                className="p-1 text-white/70 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
             <nav className="space-y-2">

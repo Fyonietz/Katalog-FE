@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import AdminSidebar from "../../components/layout/AdminSidebar";
 import { getSalesReport, type SalesReportResponse } from "../../services/reportService";
+import { Banknote, CheckCircle2, Package } from "lucide-react";
 
 export default function LaporanAdminPage() {
   const [reportData, setReportData] = useState<SalesReportResponse | null>(null);
@@ -111,21 +112,27 @@ export default function LaporanAdminPage() {
                 {/* Summary Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 shrink-0">
                   <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-4">
-                    <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-xl">📦</div>
+                    <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
+                      <Package className="w-5 h-5" />
+                    </div>
                     <div>
                       <p className="text-xs font-bold text-gray-400 uppercase">Total Semua Pesanan</p>
                       <p className="text-2xl font-black text-[#1B2A6B]">{reportData.summary.totalOrders}</p>
                     </div>
                   </div>
                   <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-4">
-                    <div className="w-12 h-12 bg-green-50 text-green-600 rounded-xl flex items-center justify-center text-xl">✅</div>
+                    <div className="w-12 h-12 bg-green-50 text-green-600 rounded-xl flex items-center justify-center">
+                      <CheckCircle2 className="w-5 h-5" />
+                    </div>
                     <div>
                       <p className="text-xs font-bold text-gray-400 uppercase">Pesanan Lunas</p>
                       <p className="text-2xl font-black text-[#1B2A6B]">{reportData.summary.paidOrders}</p>
                     </div>
                   </div>
                   <div className="bg-white p-5 rounded-2xl border border-emerald-200 shadow-sm flex items-center gap-4 bg-gradient-to-br from-emerald-50 to-white">
-                    <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center text-xl">💰</div>
+                    <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center">
+                      <Banknote className="w-5 h-5" />
+                    </div>
                     <div>
                       <p className="text-xs font-bold text-emerald-600 uppercase">Total Pendapatan</p>
                       <p className="text-2xl font-black text-emerald-700">Rp {reportData.summary.totalRevenue.toLocaleString("id-ID")}</p>

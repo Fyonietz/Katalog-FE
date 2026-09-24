@@ -2,6 +2,8 @@
 import { useEffect, useState } from "react";
 import AdminSidebar from "../../components/layout/AdminSidebar";
 import { getAllPesanan, updateStatusPengerjaan, type PesananResponse } from "../../services/pesananService";
+import { showModal } from "../../lib/showModal";
+import { Download, Eye, Inbox, RefreshCw, X } from "lucide-react";
 
 interface StatusPengerjaan {
   id: number;
@@ -71,11 +73,11 @@ export default function PesananAdminPage() {
     setIsUpdatingStatus(true);
     try {
       await updateStatusPengerjaan(selectedPesanan.id, Number(selectedStatusId));
-      alert("Status pengerjaan berhasil diubah!");
+      showModal("Status pengerjaan berhasil diubah!", { variant: "success" });
       setSelectedPesanan(null);
       fetchData();
     } catch (err: any) {
-      alert(err.message || "Gagal mengubah status pengerjaan.");
+      showModal(err.message || "Gagal mengubah status pengerjaan.", { variant: "error" });
     } finally {
       setIsUpdatingStatus(false);
     }
@@ -135,9 +137,10 @@ export default function PesananAdminPage() {
           </div>
           <button 
             onClick={fetchData}
-            className="text-xs font-bold bg-blue-50 text-[#2E9DF7] hover:bg-[#2E9DF7] hover:text-white px-4 py-2 rounded-lg transition-colors"
+            className="flex items-center gap-1.5 text-xs font-bold bg-blue-50 text-[#2E9DF7] hover:bg-[#2E9DF7] hover:text-white px-4 py-2 rounded-lg transition-colors"
           >
-            ↻ Refresh Data
+            <RefreshCw className="w-3.5 h-3.5" />
+            Refresh Data
           </button>
         </div>
 
@@ -214,7 +217,7 @@ export default function PesananAdminPage() {
               ) : finalPesanan.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center text-center p-10">
                   <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                    <span className="text-2xl">📭</span>
+                    <Inbox className="w-7 h-7 text-gray-400" />
                   </div>
                   <p className="text-sm font-bold text-gray-700">Data Tidak Ditemukan</p>
                   <p className="text-xs text-gray-500 mt-1">Coba sesuaikan kata kunci pencarian atau filter tab Anda.</p>
@@ -293,7 +296,9 @@ export default function PesananAdminPage() {
                 <h3 className="font-extrabold text-[#1B2A6B] text-base">Detail Pesanan #{selectedPesanan.id}</h3>
                 <p className="text-xs text-gray-500">Pelanggan: {selectedPesanan.namaUser}</p>
               </div>
-              <button onClick={() => setSelectedPesanan(null)} className="text-gray-400 hover:text-gray-600 font-bold p-2 text-sm">✕</button>
+              <button onClick={() => setSelectedPesanan(null)} aria-label="Tutup" className="text-gray-400 hover:text-gray-600 p-2">
+                <X className="h-4 w-4" />
+              </button>
             </div>
 
             <div className="p-6 overflow-y-auto space-y-5 text-xs">
@@ -354,8 +359,12 @@ export default function PesananAdminPage() {
                           <span className="font-bold text-gray-400">File Desain:</span>
                           {fileUrl ? (
                             <div className="flex items-center gap-2">
-                              <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="bg-gray-100 text-gray-700 hover:bg-gray-200 px-3 py-1.5 rounded-xl font-bold transition-colors shadow-sm">👁️ Lihat File</a>
-                              <a href={fileUrl} target="_blank" download rel="noopener noreferrer" className="bg-blue-50 text-[#2E9DF7] hover:bg-[#2E9DF7] hover:text-white px-3 py-1.5 rounded-xl font-bold transition-colors shadow-sm">📥 Download</a>
+                              <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 bg-gray-100 text-gray-700 hover:bg-gray-200 px-3 py-1.5 rounded-xl font-bold transition-colors shadow-sm">
+                                <Eye className="w-3.5 h-3.5" /> Lihat File
+                              </a>
+                              <a href={fileUrl} target="_blank" download rel="noopener noreferrer" className="flex items-center gap-1.5 bg-blue-50 text-[#2E9DF7] hover:bg-[#2E9DF7] hover:text-white px-3 py-1.5 rounded-xl font-bold transition-colors shadow-sm">
+                                <Download className="w-3.5 h-3.5" /> Download
+                              </a>
                             </div>
                           ) : (
                             <span className="text-gray-400 italic bg-gray-50 px-3 py-1 rounded-lg">Tidak ada file yang dilampirkan</span>

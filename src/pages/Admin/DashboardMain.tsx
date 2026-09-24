@@ -1,6 +1,6 @@
 // src/pages/Admin/DashboardMain.tsx
 import { useEffect, useState } from "react";
-import { ShieldCheck, GraduationCap, ShoppingCart, Users, Package, CheckCircle2, Tags } from "lucide-react";
+import { ShieldCheck, GraduationCap, ShoppingCart, Users, Package, CheckCircle2, Tags, ArrowRight } from "lucide-react";
 import AdminSidebar from "../../components/layout/AdminSidebar";
 import StatCard from "../../components/StatCard";
 import QuickActionCard from "../../components/QuickActionCard";
@@ -196,9 +196,15 @@ export default function DashboardMain() {
                 </div>
                 <h3 className="font-semibold text-[#1B2A6B]">Panduan Setup Katalog</h3>
               </div>
-              <p className="text-xs text-gray-400 mt-1">
-                Urutan: {SETUP_STEPS.map((s) => s.label).join(" → ")}
-              </p>
+              <div className="mt-1 flex flex-wrap items-center gap-1 text-xs text-gray-400">
+                <span>Urutan:</span>
+                {SETUP_STEPS.map((step, index) => (
+                  <span key={step.label} className="flex items-center gap-1">
+                    {step.label}
+                    {index < SETUP_STEPS.length - 1 && <ArrowRight className="h-3 w-3" />}
+                  </span>
+                ))}
+              </div>
 
               <div className="mt-4 flex flex-col gap-2">
                 {SETUP_STEPS.map((step) => (

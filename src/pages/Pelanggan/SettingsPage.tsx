@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { getAlamatUser, deleteAlamat, type AlamatGetResponse } from "../../services/alamatService";
 import { getMe } from "../../services/authService";
 import MapPickerModal from "../../components/MapPickerModal";
+import { Map, Phone } from "lucide-react";
 
 export default function SettingsPage() {
   const [alamatList, setAlamatList] = useState<AlamatGetResponse[]>([]);
@@ -78,7 +79,8 @@ export default function SettingsPage() {
             onClick={handleOpenAdd}
             className="bg-[#2E9DF7] text-white text-xs font-bold px-4 py-2.5 rounded-xl flex items-center gap-2 hover:bg-[#1B2A6B] transition-colors shadow-md"
           >
-            🗺️ Tambah dari Peta
+            <Map className="w-4 h-4" />
+            Tambah dari Peta
           </button>
         </div>
 
@@ -103,7 +105,10 @@ export default function SettingsPage() {
                     {item.namaUser}
                   </h3>
                   {item.noTelepon && item.noTelepon.trim() !== "" && (
-                    <p className="text-xs font-bold text-gray-600 mb-1">📞 {item.noTelepon}</p>
+                    <p className="flex items-center gap-1.5 text-xs font-bold text-gray-600 mb-1">
+                      <Phone className="w-3.5 h-3.5" />
+                      {item.noTelepon}
+                    </p>
                   )}
                   <p className="text-xs text-gray-500 leading-relaxed mt-1">{item.content}</p>
                 </div>

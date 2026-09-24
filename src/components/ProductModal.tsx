@@ -1,5 +1,6 @@
 // src/components/ProductModal.tsx
 import { useState, useEffect } from "react";
+import { Info, X } from "lucide-react";
 import type { Produk } from "../models/Produk";
 import { addToCart } from "../services/cartService";
 
@@ -54,7 +55,9 @@ export default function ProductModal({
         
         <div className="p-4 border-b flex justify-between items-center bg-gray-50 shrink-0">
           <h3 className="font-extrabold text-[#1B2A6B] text-base">Detail & Kustomisasi Cetak</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 font-bold text-sm">✕</button>
+          <button onClick={onClose} aria-label="Tutup" className="text-gray-400 hover:text-gray-600 p-1">
+            <X className="w-4 h-4" />
+          </button>
         </div>
 
         <div className="p-6 overflow-y-auto space-y-4">
@@ -106,7 +109,10 @@ export default function ProductModal({
             
             {/* Input upload file telah dipindahkan ke halaman Checkout */}
             <div className="bg-blue-50/50 border border-blue-100 p-3 rounded-xl mt-2">
-              <p className="text-[10px] font-bold text-blue-600">ℹ️ Info Pengiriman File</p>
+              <p className="flex items-center gap-1.5 text-[10px] font-bold text-blue-600">
+                <Info className="w-3.5 h-3.5" />
+                Info Pengiriman File
+              </p>
               <p className="text-[10px] text-gray-600 mt-0.5">Anda dapat mengunggah file desain (JPG, PNG, PDF) nanti pada saat halaman Checkout.</p>
             </div>
           </div>

@@ -1,42 +1,20 @@
-import React, { useEffect } from "react";
+// src/lib/showModal.tsx
 import { createRoot } from "react-dom/client";
+import Modal, { type ModalVariant } from "../components/ui/Modal";
 
-type Props = {
-  message: string;
-  onClose: () => void;
+type ShowModalOptions = {
+  title?: string;
+  variant?: ModalVariant;
 };
 
-function Modal({ message, onClose }: Props) {
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
+type ConfirmOptions = ShowModalOptions & {
+  confirmLabel?: string;
+  cancelLabel?: string;
+  danger?: boolean;
+};
 
-  return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-
-      <div className="relative bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl z-10">
-        <h3 className="font-extrabold text-[#1B2A6B] text-base">Pemberitahuan</h3>
-        <p className="text-sm text-gray-600 mt-3">{message}</p>
-
-        <div className="mt-5 flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-[#1B2A6B] text-white rounded-xl text-sm font-bold hover:bg-[#111A42]"
-          >
-            Tutup
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export function showModal(message: string) {
+/** Drop-in replacement for the browser `alert()` using the app's Modal. */
+export function showModal(message: string, options: ShowModalOptions = {}) {
   const container = document.createElement("div");
   document.body.appendChild(container);
   const root = createRoot(container);
@@ -44,11 +22,54 @@ export function showModal(message: string) {
   function cleanup() {
     try {
       root.unmount();
-    } catch {}
+    } catch {
+      /* noop */
+    }
     if (container.parentNode) container.parentNode.removeChild(container);
   }
 
-  root.render(<Modal message={message} onClose={cleanup} />);
+  root.render(
+    <Modal
+      isOpen
+      message={message}
+      title={options.title}
+      variant={options.variant ?? "info"}
+      onClose={cleanup}
+    />
+  );
+}
+
+/** Drop-in replacement for the browser `confirm()`. Resolves `true` when confirmed. */
+export function showConfirm(message: string, options: ConfirmOptions = {}): Promise<boolean> {
+  return new Promise((resolve) => {
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+
+    function cleanup(result: boolean) {
+      try {
+        root.unmount();
+      } catch {
+        /* noop */
+      }
+      if (container.parentNode) container.parentNode.removeChild(container);
+      resolve(result);
+    }
+
+    root.render(
+      <Modal
+        isOpen
+        message={message}
+        title={options.title ?? "Konfirmasi"}
+        variant={options.variant ?? "confirm"}
+        confirmLabel={options.confirmLabel ?? "Ya, Lanjutkan"}
+        cancelLabel={options.cancelLabel}
+        danger={options.danger}
+        onConfirm={() => cleanup(true)}
+        onClose={() => cleanup(false)}
+      />
+    );
+  });
 }
 
 export default showModal;

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { getPesananUser, deletePesanan, type PesananResponse } from "../../services/pesananService";
 import { createPaymentSnap, checkPaymentStatus } from "../../services/paymentService";
+import { showModal, showConfirm } from "../../lib/showModal";
 
 declare global {
   interface Window {
@@ -43,11 +44,11 @@ export default function PesananPage() {
         const paymentInfo = await checkPaymentStatus(idPesanan);
         if (paymentInfo.paymentStatus === "paid") {
           clearInterval(interval);
-          alert("Pembayaran berhasil dikonfirmasi!");
+          showModal("Pembayaran berhasil dikonfirmasi!", { variant: "success" });
           fetchPesanan();
         } else if (["failed", "expired", "cancelled"].includes(paymentInfo.paymentStatus)) {
           clearInterval(interval);
-          alert(`Status Pembayaran: ${paymentInfo.paymentStatus}.`);
+          showModal(`Status Pembayaran: ${paymentInfo.paymentStatus}.`, { variant: "warning" });
           fetchPesanan();
         }
       } catch (err) {
@@ -70,7 +71,7 @@ export default function PesananPage() {
           onSuccess: () => pollPaymentStatus(idPesanan),
           onPending: () => pollPaymentStatus(idPesanan),
           onError: () => {
-            alert("Pembayaran gagal diproses.");
+            showModal("Pembayaran gagal diproses.", { variant: "error" });
             setProcessingId(null);
             fetchPesanan();
           },
@@ -83,21 +84,25 @@ export default function PesananPage() {
         window.location.href = paymentData.redirectUrl;
       }
     } catch (err: any) {
-      alert(err.message || "Gagal memuat pembayaran.");
+      showModal(err.message || "Gagal memuat pembayaran.", { variant: "error" });
       setProcessingId(null);
     }
   };
 
   const handleBatalkanPesanan = async (idPesanan: number) => {
-    if (!confirm("Apakah Anda yakin ingin membatalkan dan menghapus pesanan ini?")) return;
+    const ok = await showConfirm(
+      "Apakah Anda yakin ingin membatalkan dan menghapus pesanan ini?",
+      { title: "Batalkan Pesanan", danger: true, confirmLabel: "Ya, Batalkan" }
+    );
+    if (!ok) return;
     
     setDeletingId(idPesanan);
     try {
       await deletePesanan(idPesanan);
-      alert("Pesanan berhasil dibatalkan.");
+      showModal("Pesanan berhasil dibatalkan.", { variant: "success" });
       fetchPesanan();
     } catch (err: any) {
-      alert(err.message || "Gagal membatalkan pesanan. Mungkin pesanan sudah terkunci di sistem pembayaran[cite: 2].");
+      showModal(err.message || "Gagal membatalkan pesanan. Mungkin pesanan sudah terkunci di sistem pembayaran.", { variant: "error" });
     } finally {
       setDeletingId(null);
     }
@@ -149,10 +154,10 @@ export default function PesananPage() {
         throw new Error(errorData.message || "Gagal memperbarui file desain.");
       }
 
-      alert("File desain berhasil diunggah/diperbarui!");
+      showModal("File desain berhasil diunggah/diperbarui!", { variant: "success" });
       fetchPesanan();
     } catch (err: any) {
-      alert(err.message || "Terjadi kesalahan saat mengunggah file.");
+      showModal(err.message || "Terjadi kesalahan saat mengunggah file.", { variant: "error" });
     } finally {
       setUploadingId(null);
     }

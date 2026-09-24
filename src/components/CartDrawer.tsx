@@ -1,5 +1,7 @@
 // src/components/CartDrawer.tsx
 import { useNavigate } from "react-router-dom";
+import { X } from "lucide-react";
+import { showModal } from "../lib/showModal";
 
 export default function CartDrawer({
   open,
@@ -16,7 +18,7 @@ export default function CartDrawer({
   // Fungsi untuk menangani klik tombol Checkout
   const handleProceedToCheckout = () => {
     if (cart.length === 0) {
-      alert("Keranjang masih kosong!");
+      showModal("Keranjang masih kosong!", { variant: "warning", title: "Keranjang Kosong" });
       return;
     }
     
@@ -49,8 +51,9 @@ export default function CartDrawer({
           <button 
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 p-2"
+            aria-label="Tutup keranjang"
           >
-            ✕
+            <X className="h-5 w-5" />
           </button>
         </div>
 

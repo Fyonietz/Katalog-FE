@@ -1,5 +1,5 @@
  // components/StatCard.tsx
-import type { LucideIcon } from "lucide-react";
+import { ArrowRight, type LucideIcon } from "lucide-react";
 
 interface StatCardProps {
   icon: LucideIcon;
@@ -17,8 +17,12 @@ export default function StatCard({ icon: Icon, label, value, actionLabel, onActi
           <Icon className="h-4 w-4 text-[#2E9DF7]" />
         </div>
         {actionLabel && (
-          <button onClick={onAction} className="text-xs font-medium text-gray-400 hover:text-[#1B2A6B]">
-            {actionLabel} →
+          <button
+            onClick={onAction}
+            className="flex items-center gap-1 text-xs font-medium text-gray-400 hover:text-[#1B2A6B]"
+          >
+            {actionLabel}
+            <ArrowRight className="h-3 w-3" />
           </button>
         )}
       </div>

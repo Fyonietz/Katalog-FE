@@ -9,6 +9,7 @@ import {
 } from "../../services/cartService";
 import { getProdukList } from "../../services/produkService";
 import ProductModal from "../../components/ProductModal";
+import { X } from "lucide-react";
 import type { CartItem } from "../../models/CartItem";
 import type { Produk } from "../../models/Produk";
 
@@ -109,9 +110,10 @@ export default function KeranjangPage() {
                   <div className="flex flex-col items-end gap-3 shrink-0">
                     <button
                       onClick={() => handleRemove(produk.id)}
-                      className="text-gray-400 hover:text-red-500 text-xs font-bold p-1"
+                      aria-label="Hapus item"
+                      className="text-gray-400 hover:text-red-500 p-1"
                     >
-                      ✕
+                      <X className="w-4 h-4" />
                     </button>
                     <div className="flex items-center gap-2 bg-gray-50 border rounded-xl p-1">
                       <button
