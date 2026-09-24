@@ -94,8 +94,7 @@ export default function KategoriProdukAdminPage() {
   };
 
   return (
-    <div className="flex h-screen bg-[#F4F6FB]">
-      <AdminSidebar />
+<div className="flex-1 flex flex-col min-w-0 h-full bg-[#F4F6FB]">
 
       <div className="flex-1 overflow-y-auto p-8">
         <div className="flex items-center justify-between mb-6">

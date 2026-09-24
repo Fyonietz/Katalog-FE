@@ -48,8 +48,7 @@ export default function DashboardMain() {
   };
 
   return (
-    <div className="flex h-screen bg-[#F4F6FB]">
-      <AdminSidebar />
+<div className="flex-1 flex flex-col min-w-0 h-full bg-[#F4F6FB]">
 
       <div className="flex-1 overflow-y-auto">
         {/* Topbar */}

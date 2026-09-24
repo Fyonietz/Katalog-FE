@@ -153,8 +153,7 @@ export default function LayananAdminPage() {
   };
 
   return (
-    <div className="flex h-screen bg-[#F4F6FB] overflow-hidden">
-      <AdminSidebar />
+<div className="flex-1 flex flex-col min-w-0 h-full bg-[#F4F6FB]">
 
       <div className="flex-1 flex flex-col min-w-0">
         {/* Topbar */}
