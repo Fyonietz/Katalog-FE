@@ -20,6 +20,12 @@ export async function getAlamatUser(): Promise<AlamatGetResponse[]> {
   return data;
 }
 
+// GET /api/v1/alamat/all — seluruh alamat (dipakai dashboard admin).
+export async function getAllAlamat(): Promise<AlamatGetResponse[]> {
+  const { data } = await api.get<AlamatGetResponse[]>("/api/v1/alamat/all");
+  return data ?? [];
+}
+
 export async function createAlamat(payload: AlamatPostPayload): Promise<any> {
   const { data } = await api.post("/api/v1/alamat", payload);
   return data;

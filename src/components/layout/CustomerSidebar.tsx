@@ -118,7 +118,7 @@ export default function CustomerSidebar({
               </button>
             </div>
 
-            <nav className="space-y-2">
+            <nav className="space-y-2 flex-1">
               {menuItems.map((item) => (
                 <NavLink
                   key={item.path}
@@ -135,6 +135,15 @@ export default function CustomerSidebar({
                 </NavLink>
               ))}
             </nav>
+            
+            {/* Tautan Katalog di Mobile agar konsisten dengan Desktop */}
+            <a
+              href="/shopping"
+              className="mt-auto flex items-center gap-2 text-xs font-bold text-blue-200 hover:text-white pt-4 border-t border-white/10"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Kembali ke Katalog
+            </a>
           </motion.aside>
         </div>
       )}

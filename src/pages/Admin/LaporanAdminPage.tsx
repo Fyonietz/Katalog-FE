@@ -1,8 +1,9 @@
- // src/pages/Admin/LaporanAdminPage.tsx
+// src/pages/Admin/LaporanAdminPage.tsx
 import { useEffect, useState } from "react";
 import AdminSidebar from "../../components/layout/AdminSidebar";
 import { getSalesReport, type SalesReportResponse } from "../../services/reportService";
-import { Banknote, CheckCircle2, Package } from "lucide-react";
+import { Banknote, CheckCircle2, Package, Download } from "lucide-react";
+import * as XLSX from "xlsx"; // <-- Import library Excel
 
 export default function LaporanAdminPage() {
   const [reportData, setReportData] = useState<SalesReportResponse | null>(null);
@@ -18,11 +19,9 @@ export default function LaporanAdminPage() {
     try {
       setLoading(true);
       setError(null);
-      // Panggil API GET /api/v1/reports/sales dengan query params[cite: 3]
       const data = await getSalesReport(startDate, endDate, period);
       setReportData(data);
       
-      // Update filter input dengan rentang efektif dari backend (default backend)[cite: 3]
       if (!startDate) setStartDate(data.startDate);
       if (!endDate) setEndDate(data.endDate);
     } catch (err: any) {
@@ -35,11 +34,77 @@ export default function LaporanAdminPage() {
   useEffect(() => {
     fetchReport();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [period]); // Otomatis refresh jika periode (day/month/year) berubah
+  }, [period]);
 
   const handleFilterSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     fetchReport();
+  };
+
+  // FUNGSI EXPORT EXCEL (Native .xlsx Format)
+  const handleExportExcel = () => {
+    if (!reportData || reportData.rows.length === 0) {
+      alert("Tidak ada data untuk diekspor");
+      return;
+    }
+
+    // 1. Format Data Baris Utama
+    const excelData = reportData.rows.map((row) => ({
+      "Periode": row.period,
+      "Total Pesanan": row.totalOrders,
+      "Pesanan Lunas": row.paidOrders,
+      "Pendapatan (Rp)": row.revenue,
+    }));
+
+    // 2. Tambahkan Baris Kosong sebagai pemisah
+    excelData.push({
+      "Periode": "",
+      "Total Pesanan": null as any,
+      "Pesanan Lunas": null as any,
+      "Pendapatan (Rp)": null as any,
+    });
+
+    // 3. Tambahkan Data Ringkasan (Summary)
+    excelData.push({
+      "Periode": "RINGKASAN",
+      "Total Pesanan": null as any,
+      "Pesanan Lunas": null as any,
+      "Pendapatan (Rp)": null as any,
+    });
+    excelData.push({
+      "Periode": "Total Semua Pesanan",
+      "Total Pesanan": reportData.summary.totalOrders as any,
+      "Pesanan Lunas": null as any,
+      "Pendapatan (Rp)": null as any,
+    });
+    excelData.push({
+      "Periode": "Pesanan Lunas",
+      "Total Pesanan": reportData.summary.paidOrders as any,
+      "Pesanan Lunas": null as any,
+      "Pendapatan (Rp)": null as any,
+    });
+    excelData.push({
+      "Periode": "Total Pendapatan",
+      "Total Pesanan": null as any,
+      "Pesanan Lunas": null as any,
+      "Pendapatan (Rp)": reportData.summary.totalRevenue,
+    });
+
+    // 4. Buat Worksheet & Workbook
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Laporan Penjualan");
+
+    // 5. Atur lebar kolom agar rapi (otomatis di Excel)
+    worksheet["!cols"] = [
+      { wch: 25 }, // Kolom Periode
+      { wch: 15 }, // Kolom Total Pesanan
+      { wch: 15 }, // Kolom Pesanan Lunas
+      { wch: 20 }, // Kolom Pendapatan
+    ];
+
+    // 6. Trigger Download File .xlsx
+    XLSX.writeFile(workbook, `Laporan_Penjualan_${reportData.startDate}_sd_${reportData.endDate}.xlsx`);
   };
 
   return (
@@ -51,8 +116,18 @@ export default function LaporanAdminPage() {
         <div className="shrink-0 bg-white border-b border-gray-200 px-8 py-4 flex justify-between items-center z-10">
           <div>
             <h1 className="text-lg font-bold text-[#1B2A6B]">Laporan Penjualan</h1>
-            <p className="text-xs text-gray-500">Ringkasan pendapatan dari pesanan yang lunas (Paid)[cite: 3].</p>
+            <p className="text-xs text-gray-500">Ringkasan pendapatan dari pesanan yang lunas (Paid).</p>
           </div>
+          
+          {/* Tombol Export Excel */}
+          <button
+            onClick={handleExportExcel}
+            disabled={!reportData || reportData.rows.length === 0}
+            className="flex items-center gap-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 px-4 py-2 rounded-xl text-xs font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+          >
+            <Download className="w-4 h-4" />
+            Export Excel
+          </button>
         </div>
 
         {/* Konten Utama */}
@@ -81,7 +156,7 @@ export default function LaporanAdminPage() {
                   />
                 </div>
                 <div className="w-full md:w-auto flex-1">
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Pengelompokan (Period)[cite: 3]</label>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Pengelompokan (Period)</label>
                   <select
                     value={period}
                     onChange={(e) => setPeriod(e.target.value)}
@@ -149,7 +224,7 @@ export default function LaporanAdminPage() {
                     {reportData.rows.length === 0 ? (
                       <div className="flex flex-col items-center justify-center text-center p-10 h-full">
                         <p className="text-sm font-bold text-gray-700">Tidak ada data penjualan</p>
-                        <p className="text-xs text-gray-500 mt-1">Belum ada pesanan aktif pada rentang tanggal ini[cite: 3].</p>
+                        <p className="text-xs text-gray-500 mt-1">Belum ada pesanan aktif pada rentang tanggal ini.</p>
                       </div>
                     ) : (
                       <table className="w-full text-left border-collapse min-w-[600px]">

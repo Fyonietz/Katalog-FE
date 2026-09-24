@@ -57,11 +57,12 @@ export default function UserProfileCard({ onClose }: UserProfileCardProps) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 15, scale: 0.95 }}
+      initial={{ opacity: 0, y: -10, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+      exit={{ opacity: 0, y: -10, scale: 0.95 }}
       transition={{ type: "spring", stiffness: 400, damping: 30 }}
-      className="absolute bottom-[75px] left-3 w-[290px] bg-white rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.2)] border border-gray-100 overflow-hidden z-50 flex flex-col"
+      // PERBAIKAN: Posisi dropdown jatuh ke bawah-kiri dari tombol di Topbar
+      className="absolute top-[calc(100%+8px)] right-0 w-[290px] bg-white rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.2)] border border-gray-100 overflow-hidden z-50 flex flex-col"
     >
       {/* Banner Header */}
       <div className="h-20 bg-gradient-to-r from-[#1B2A6B] to-[#2E9DF7] w-full relative">
@@ -138,11 +139,12 @@ export default function UserProfileCard({ onClose }: UserProfileCardProps) {
             viewBox="0 0 24 24"
             stroke="currentColor"
           >
+            {/* PERBAIKAN: Path SVG diperbaiki (menghapus teks aneh 'summit 826') */}
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
               strokeWidth={2}
-              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94 summit 826 3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543-.826-3.31-2.37-2.37.996.608 2.296.07 2.572-1.065z"
             />
             <path
               strokeLinecap="round"

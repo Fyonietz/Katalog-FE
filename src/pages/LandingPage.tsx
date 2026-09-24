@@ -1,12 +1,14 @@
 // pages/LandingPage.tsx
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { Layers } from "lucide-react";
 import { useLandingController } from "../hooks/useLandingController";
 import ProductCard from "../components/ProductCard";
 import Navbar from "../components/Navbar";
 import AnimatedCounter from "../components/AnimatedCounter";
 import PrinterAnimation from "../components/PrinterAnimation";
 import ProductModal from "../components/ProductModal";
+import { getImageUrl } from "../utils/getImageUrl";
 import type { Produk } from "../models/Produk";
 
 export default function LandingPage() {
@@ -17,7 +19,21 @@ export default function LandingPage() {
     produkTerfilter,
     loading,
     handleBeli,
+    stats,
+    layananList,
   } = useLandingController();
+
+  // Section "Layanan" hanya muncul kalau katalog layanan berhasil dimuat.
+  const navLinks = useMemo(() => {
+    const links = [
+      { id: "beranda", label: "Beranda" },
+      { id: "tentang", label: "Tentang" },
+    ];
+    if (layananList.length > 0) links.push({ id: "layanan", label: "Layanan" });
+    links.push({ id: "produk", label: "Produk" });
+    links.push({ id: "kontak", label: "Kontak" });
+    return links;
+  }, [layananList.length]);
 
   // State untuk modal detail produk
   const [selectedProduk, setSelectedProduk] = useState<Produk | null>(null);
@@ -34,7 +50,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-[#F4F6FB]">
-      <Navbar />
+      <Navbar links={navLinks} />
 
       {/* ===== HERO ===== */}
       <section
@@ -128,14 +144,67 @@ export default function LandingPage() {
             dalam setiap project.
           </motion.p>
 
-          <div className="mt-14 grid grid-cols-2 md:grid-cols-4 gap-8">
+          {/* Angka di bawah ini diambil dari API katalog, bukan hardcode. */}
+          <div className="mt-14 flex flex-wrap justify-center gap-x-16 gap-y-10">
+            <AnimatedCounter value={stats.totalProduk} label="Produk Siap Cetak" loading={loading} />
+            <AnimatedCounter value={stats.totalKategori} label="Lini Bisnis" loading={loading} />
+            {stats.totalLayanan > 0 && (
+              <AnimatedCounter value={stats.totalLayanan} label="Layanan Katalog" />
+            )}
             <AnimatedCounter value={24} suffix="/7" label="Layanan Produksi" />
-            <AnimatedCounter value={500} suffix="+" label="Project Selesai" />
-            <AnimatedCounter value={4} label="Lini Bisnis" />
-            <AnimatedCounter value={1} label="Nomor di Pekanbaru" />
           </div>
         </div>
       </section>
+
+      {/* ===== LAYANAN (GET /api/v1/layanan) ===== */}
+      {layananList.length > 0 && (
+        <section id="layanan" className="px-6 py-24 max-w-7xl mx-auto w-full">
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-3xl font-bold text-[#1B2A6B]"
+          >
+            Layanan Kami
+          </motion.h2>
+          <p className="mt-1 text-sm text-gray-500">
+            Layanan percetakan yang tersedia di Nusantara Mandiri Printing.
+          </p>
+
+          <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {layananList.map((layanan) => (
+              <motion.article
+                key={layanan.id}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.2 }}
+                className="group overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-shadow hover:shadow-xl"
+              >
+                <div
+                  className="aspect-[16/9] overflow-hidden bg-[#EAF2FE]"
+                  style={layanan.backgroundColor ? { backgroundColor: layanan.backgroundColor } : undefined}
+                >
+                  {layanan.imagePath ? (
+                    <img
+                      src={getImageUrl(layanan.imagePath)}
+                      alt={layanan.nama}
+                      className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center">
+                      <Layers className="h-8 w-8 text-[#2E9DF7]/60" />
+                    </div>
+                  )}
+                </div>
+                <div className="p-5">
+                  <h3 className="text-base font-bold text-[#1B2A6B]">{layanan.nama}</h3>
+                  <p className="mt-1 text-sm leading-relaxed text-gray-600">{layanan.deskripsi}</p>
+                </div>
+              </motion.article>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* ===== PRODUK ===== */}
       <section id="produk" className="px-6 py-24 max-w-7xl mx-auto w-full">

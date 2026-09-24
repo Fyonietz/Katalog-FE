@@ -22,7 +22,14 @@ export default function PesananPage() {
     try {
       setLoading(true);
       const data = await getPesananUser();
-      setPesananList((data || []).sort((a, b) => b.id - a.id));
+      
+      // Filter: Jangan tampilkan pesanan yang sudah LUNAS dan SELESAI dikerjakan
+      // (Pesanan ini nantinya hanya akan ditarik di halaman RiwayatPage)
+      const activeOrders = (data || []).filter(
+        (p) => !(p.paymentStatus.toLowerCase() === "paid" && p.statusPengerjaan?.toLowerCase() === "selesai")
+      );
+
+      setPesananList(activeOrders.sort((a, b) => b.id - a.id));
     } catch (err) {
       console.error("Gagal memuat pesanan:", err);
     } finally {
@@ -108,7 +115,6 @@ export default function PesananPage() {
     }
   };
 
-  // Fungsi untuk update/upload file desain via PUT /api/v1/pesanan/{id}
   const handleUploadFileDesain = async (pesanan: PesananResponse, file: File | null) => {
     if (!file) return;
     setUploadingId(pesanan.id);
@@ -117,24 +123,15 @@ export default function PesananPage() {
       const form = new FormData();
       form.append("idAlamat", String(pesanan.idAlamat));
 
-      // Rekonstruksi items dari detail yang sudah ada
       pesanan.details.forEach((item, index) => {
         form.append(`items[${index}].idProduct`, String(item.idProduct));
         form.append(`items[${index}].qty`, String(item.qty));
         
-        if (item.idUkuranProduk) {
-          form.append(`items[${index}].idUkuranProduk`, String(item.idUkuranProduk));
-        }
-        if (item.ukuranCustom) {
-          form.append(`items[${index}].ukuranCustom`, item.ukuranCustom);
-        }
-        if (item.notes) {
-          form.append(`items[${index}].notes`, item.notes);
-        }
-        if (item.desainText) {
-          form.append(`items[${index}].desainText`, item.desainText);
-        }
-        // Masukkan file baru yang di-upload
+        if (item.idUkuranProduk) form.append(`items[${index}].idUkuranProduk`, String(item.idUkuranProduk));
+        if (item.ukuranCustom) form.append(`items[${index}].ukuranCustom`, item.ukuranCustom);
+        if (item.notes) form.append(`items[${index}].notes`, item.notes);
+        if (item.desainText) form.append(`items[${index}].desainText`, item.desainText);
+        
         form.append(`items[${index}].desain`, file);
       });
 
@@ -143,9 +140,7 @@ export default function PesananPage() {
 
       const res = await fetch(`${API_URL}/api/v1/pesanan/${pesanan.id}`, {
         method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
         body: form,
       });
 
@@ -163,15 +158,16 @@ export default function PesananPage() {
     }
   };
 
+  // Badge Status Pembayaran
   const getStatusBadge = (status: string) => {
     switch (status.toLowerCase()) {
-      case "paid": return <span className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-[10px] font-extrabold uppercase tracking-wide">Lunas</span>;
-      case "pending": return <span className="bg-amber-100 text-amber-700 px-2 py-1 rounded text-[10px] font-extrabold uppercase tracking-wide">Menunggu Pembayaran</span>;
-      case "unpaid": return <span className="bg-red-100 text-red-700 px-2 py-1 rounded text-[10px] font-extrabold uppercase tracking-wide">Belum Bayar</span>;
+      case "paid": return <span className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-[10px] font-extrabold uppercase tracking-wide border border-emerald-200">Lunas</span>;
+      case "pending": return <span className="bg-amber-100 text-amber-700 px-2 py-1 rounded text-[10px] font-extrabold uppercase tracking-wide border border-amber-200">Menunggu Pembayaran</span>;
+      case "unpaid": return <span className="bg-red-100 text-red-700 px-2 py-1 rounded text-[10px] font-extrabold uppercase tracking-wide border border-red-200">Belum Bayar</span>;
       case "cancelled":
       case "expired": 
-      case "failed": return <span className="bg-gray-100 text-gray-500 px-2 py-1 rounded text-[10px] font-extrabold uppercase tracking-wide">Dibatalkan</span>;
-      default: return <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-[10px] font-extrabold uppercase tracking-wide">{status}</span>;
+      case "failed": return <span className="bg-gray-100 text-gray-500 px-2 py-1 rounded text-[10px] font-extrabold uppercase tracking-wide border border-gray-200">Dibatalkan</span>;
+      default: return <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-[10px] font-extrabold uppercase tracking-wide border border-gray-200">{status}</span>;
     }
   };
 
@@ -188,7 +184,8 @@ export default function PesananPage() {
         </div>
       ) : pesananList.length === 0 ? (
         <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm text-center py-16">
-          <p className="text-sm font-bold text-[#1B2A6B]">Belum Ada Pesanan</p>
+          <p className="text-sm font-bold text-[#1B2A6B]">Belum Ada Pesanan Aktif</p>
+          <p className="text-xs text-gray-500 mt-1">Pesanan yang sudah selesai atau riwayat transaksi dapat dilihat di menu Riwayat.</p>
           <Link to="/shopping" className="mt-4 inline-block bg-[#1B2A6B] text-white text-xs font-bold px-6 py-3 rounded-xl shadow-md">
             Mulai Belanja
           </Link>
@@ -199,8 +196,28 @@ export default function PesananPage() {
             const isUnpaid = pesanan.paymentStatus.toLowerCase() === "unpaid";
             const canPay = ["unpaid", "pending"].includes(pesanan.paymentStatus.toLowerCase());
             
+            // --- LOGIKA BACKGROUND KARTU (FULL CARD) ---
+            let cardBgClass = "bg-white border-gray-100 shadow-sm"; // Default
+            const workStat = (pesanan.statusPengerjaan || "").toLowerCase();
+            
+            if (isUnpaid) {
+              cardBgClass = "bg-red-50/40 border-red-100 shadow-sm"; 
+            } else if (pesanan.paymentStatus.toLowerCase() === "paid") {
+              if (workStat === "selesai") {
+                cardBgClass = "bg-emerald-50 border-emerald-200 shadow-md"; 
+              } else if (workStat === "diproses" || workStat === "proses") {
+                cardBgClass = "bg-blue-50 border-blue-200 shadow-md"; 
+              } else if (workStat === "menunggu" || workStat === "konfirmasi" || workStat === "menunggu konfirmasi") {
+                cardBgClass = "bg-amber-50 border-amber-200 shadow-sm"; 
+              }
+            }
+            
             return (
-              <div key={pesanan.id} className="bg-white rounded-2xl p-5 md:p-6 border border-gray-100 shadow-sm flex flex-col md:flex-row md:items-start justify-between gap-5">
+              <div 
+                key={pesanan.id} 
+                // Background kartu disuntikkan di sini
+                className={`rounded-2xl p-5 md:p-6 border transition-all flex flex-col md:flex-row md:items-start justify-between gap-5 ${cardBgClass}`}
+              >
                 
                 {/* Info Kiri */}
                 <div className="flex-1 space-y-3">
@@ -211,11 +228,13 @@ export default function PesananPage() {
                     </span>
                   </div>
                   
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     {getStatusBadge(pesanan.paymentStatus)}
+                    
+                    {/* Badge Pengerjaan dikembalikan ke gaya elegan abu-abu gelap */}
                     {!["cancelled", "expired", "failed"].includes(pesanan.paymentStatus.toLowerCase()) && (
-                       <span className="bg-blue-50 text-blue-600 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wide border border-blue-100">
-                        Pengerjaan: {pesanan.statusPengerjaan}
+                       <span className="bg-[#64707D] text-white px-2.5 py-1 rounded-md text-[10px] font-extrabold uppercase tracking-wide shadow-sm">
+                         Pengerjaan: {pesanan.statusPengerjaan}
                        </span>
                     )}
                   </div>
@@ -228,9 +247,9 @@ export default function PesananPage() {
                         : null;
 
                       return (
-                        <div key={item.id} className="bg-gray-50 p-3.5 rounded-xl border border-gray-100 space-y-2">
+                        <div key={item.id} className="bg-white/70 p-3.5 rounded-xl border border-white/80 shadow-sm space-y-2 backdrop-blur-sm">
                           <div className="flex justify-between items-center">
-                            <p className="text-xs font-bold text-[#1B2A6B]">
+                            <p className="text-xs font-extrabold text-[#1B2A6B]">
                               {item.qty}x {item.namaProduct}
                             </p>
                           </div>
@@ -244,11 +263,11 @@ export default function PesananPage() {
                           )}
 
                           {/* Status & Tombol Upload File Desain Khusus Pesanan Ini */}
-                          <div className="pt-2 border-t border-gray-200/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                          <div className="pt-2 border-t border-gray-200/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                             <div className="text-[10px]">
                               <span className="font-bold text-gray-500">File Desain(Opsional): </span>
                               {fileUrl ? (
-                                <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 font-bold underline">
+                                <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold underline">
                                   Lihat File Terunggah
                                 </a>
                               ) : (
@@ -280,7 +299,7 @@ export default function PesananPage() {
                 </div>
 
                 {/* Info Kanan (Harga & Aksi Bayar/Batal) */}
-                <div className="flex flex-col items-start md:items-end gap-4 border-t md:border-t-0 md:border-l border-gray-100 pt-4 md:pt-0 md:pl-6 w-full md:w-auto shrink-0">
+                <div className="flex flex-col items-start md:items-end gap-4 border-t md:border-t-0 md:border-l border-gray-200/60 pt-4 md:pt-0 md:pl-6 w-full md:w-auto shrink-0">
                   <div className="w-full md:text-right">
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Total Bayar</p>
                     <p className="text-xl font-black text-[#2E9DF7]">Rp {pesanan.totalHarga.toLocaleString("id-ID")}</p>
@@ -301,7 +320,7 @@ export default function PesananPage() {
                        <button
                          onClick={() => handleBatalkanPesanan(pesanan.id)}
                          disabled={deletingId === pesanan.id}
-                         className="w-full px-4 py-2 border-2 border-red-100 text-red-500 hover:bg-red-50 rounded-xl text-xs font-bold transition-all text-center"
+                         className="w-full px-4 py-2 border-2 border-red-200 text-red-500 hover:bg-red-50 hover:border-red-300 rounded-xl text-xs font-bold transition-all text-center bg-white/50"
                        >
                          {deletingId === pesanan.id ? "Membatalkan..." : "Batalkan Pesanan"}
                        </button>

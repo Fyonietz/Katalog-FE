@@ -21,7 +21,7 @@ export async function createProduct(formData: FormData): Promise<Produk> {
  // Tambahkan fungsi Update/Patch Produk
 export async function updateProduct(id: number | string, formData: FormData): Promise<Produk> {
   const { data } = await api.patch<Produk>(`/api/v1/products/${id}`, formData, {
-    headers: { "Content-Type": "multipart/form-data" },
+    headers: { "Content-Type": "application/json" },
   });
   return data;
 }

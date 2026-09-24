@@ -4,7 +4,7 @@ import {
   Package,
   Tags,
   ShoppingCart,
-  Users,
+  Layers,
   BarChart3,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -26,6 +26,7 @@ export const sidebarItems: SidebarItem[] = [
       { label: "Daftar Produk", path: "/dashboard/admin/produk/daftar", icon: Package },
     ],
   },
+  { label: "Layanan", path: "/dashboard/admin/layanan", icon: Layers },
   { label: "Pesanan", path: "/dashboard/admin/pesanan", icon: ShoppingCart },
   { label: "Laporan Penjualan", path: "/dashboard/admin/report", icon: BarChart3 },
 ];

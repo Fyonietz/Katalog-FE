@@ -1,16 +1,28 @@
 // components/Navbar.tsx
+import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { useScrollSpy } from "../hooks/useScrollSpy";
 
-const LINKS = [
+export interface NavbarLink {
+  id: string;
+  label: string;
+}
+
+const LINKS: NavbarLink[] = [
   { id: "beranda", label: "Beranda" },
   { id: "tentang", label: "Tentang" },
   { id: "produk", label: "Produk" },
   { id: "kontak", label: "Kontak" },
 ];
 
-export default function Navbar() {
-  const activeId = useScrollSpy(LINKS.map((l) => l.id));
+interface NavbarProps {
+  /** Daftar section yang dipantau — halaman bisa menambah section opsional. */
+  links?: NavbarLink[];
+}
+
+export default function Navbar({ links = LINKS }: NavbarProps) {
+  const sectionIds = useMemo(() => links.map((l) => l.id), [links]);
+  const activeId = useScrollSpy(sectionIds);
 
   function scrollTo(id: string) {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
@@ -26,7 +38,7 @@ export default function Navbar() {
       <span className="font-bold text-[#1B2A6B] text-lg">Nusantara Mandiri Printing</span>
 
       <div className="hidden md:flex items-center gap-8">
-        {LINKS.map((link) => (
+        {links.map((link) => (
           <button
             key={link.id}
             onClick={() => scrollTo(link.id)}

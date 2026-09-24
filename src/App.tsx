@@ -8,6 +8,7 @@ import ProdukAdmin from "./pages/Admin/ProdukAdminPage";
 import PesananAdminPage from "./pages/Admin/PesananAdminPage";
 import LaporanAdminPage from "./pages/Admin/LaporanAdminPage";
 import KategoriProdukAdmin from "./pages/Admin/KategoriProdukAdminPage";
+import LayananAdminPage from "./pages/Admin/LayananAdminPage";
 import CustomerLayout from "./pages/Pelanggan/CustomerLayout";
 import KeranjangPage from "./pages/Pelanggan/KeranjangPage";
 import PesananPage from "./pages/Pelanggan/PesananPage";
@@ -47,6 +48,15 @@ function App() {
         <KategoriProdukAdmin />
         </ProtectedRoute>
       }
+      />
+
+      <Route
+        path="/dashboard/admin/layanan"
+        element={
+          <ProtectedRoute allowedRoles={["Admin"]}>
+            <LayananAdminPage />
+          </ProtectedRoute>
+        }
       />
  <Route
         path="/dashboard/admin/pesanan"

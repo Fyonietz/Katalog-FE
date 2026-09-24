@@ -1,11 +1,20 @@
 // src/pages/Admin/DashboardMain.tsx
-import { useEffect, useState } from "react";
-import { ShieldCheck, GraduationCap, ShoppingCart, Users, Package, CheckCircle2, Tags, ArrowRight } from "lucide-react";
+import {
+  ShieldCheck,
+  ShoppingCart,
+  Users,
+  Package,
+  CheckCircle2,
+  Tags,
+  ArrowRight,
+  Banknote,
+  Clock,
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import AdminSidebar from "../../components/layout/AdminSidebar";
 import StatCard from "../../components/StatCard";
 import QuickActionCard from "../../components/QuickActionCard";
 import { useDashboardAdminController } from "../../hooks/useDashboardAdminController";
-import { getAllPesanan, type PesananResponse } from "../../services/pesananService";
 
 const SETUP_STEPS = [
   { label: "Kategori Produk", done: true },
@@ -14,37 +23,17 @@ const SETUP_STEPS = [
   { label: "Ongkos Kirim", done: false },
 ];
 
+const rupiah = (value: number) => `Rp ${value.toLocaleString("id-ID")}`;
+
+function formatJam(iso: string | null): string {
+  if (!iso) return "-";
+  return new Date(iso).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+}
+
 export default function DashboardMain() {
-  const { stats, loading: hookLoading, nama } = useDashboardAdminController();
-  
-  // State khusus untuk pesanan
-  const [pesananList, setPesananList] = useState<PesananResponse[]>([]);
-  const [pesananLoading, setPesananLoading] = useState<boolean>(true);
-  const [pesananError, setPesananError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchSemuaPesanan = async () => {
-      try {
-        setPesananLoading(true);
-        const data = await getAllPesanan();
-        const sortedData = data.sort((a, b) => b.id - a.id); // Urutkan terbaru
-        setPesananList(sortedData);
-      } catch (err: any) {
-        setPesananError(err.message || "Gagal memuat data pesanan.");
-      } finally {
-        setPesananLoading(false);
-      }
-    };
-
-    fetchSemuaPesanan();
-  }, []);
-
-  // Hitung Statistik Berdasarkan Pesanan (Jika hook Anda tidak menyediakannya)
-  const totalPesananMasuk = pesananList.length;
-  const pesananPendingBayar = pesananList.filter(p => ["unpaid", "pending"].includes(p.paymentStatus)).length;
-  // Gunakan stats dari hook jika ada, jika tidak fallback ke perhitungan lokal
-  const displayTotalPesanan = stats?.totalPesanan ?? totalPesananMasuk;
-  const displayPesananPending = stats?.pesananPending ?? pesananPendingBayar;
+  const navigate = useNavigate();
+  const { stats, pesanan, salesSummary, salesPeriod, updatedAt, loading, error, nama } =
+    useDashboardAdminController();
 
   const getPaymentBadge = (status: string) => {
     switch (status.toLowerCase()) {
@@ -52,7 +41,7 @@ export default function DashboardMain() {
       case "pending": return <span className="bg-amber-100 text-amber-700 px-2 py-1 rounded text-xs font-bold">Pending</span>;
       case "unpaid": return <span className="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold">Belum Bayar</span>;
       case "cancelled":
-      case "expired": 
+      case "expired":
       case "failed": return <span className="bg-gray-100 text-gray-500 px-2 py-1 rounded text-xs font-bold">Batal</span>;
       default: return <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs font-bold">{status}</span>;
     }
@@ -84,38 +73,82 @@ export default function DashboardMain() {
               </div>
 
               <div className="rounded-xl bg-white/10 px-4 py-3 text-right">
-                <p className="text-[10px] uppercase tracking-wide text-[#AEB9E0]">Status Sistem</p>
+                <p className="text-[10px] uppercase tracking-wide text-[#AEB9E0]">Data Diperbarui</p>
                 <p className="mt-1 flex items-center gap-1.5 text-sm font-semibold">
                   <span className="h-2 w-2 rounded-full bg-green-400" />
-                  Online & Terhubung
+                  {loading ? "Memuat..." : `Pukul ${formatJam(updatedAt)} WIB`}
                 </p>
               </div>
             </div>
             <div className="absolute -bottom-16 -right-10 w-56 h-56 bg-[#2E9DF7] opacity-20 rounded-[3rem] rotate-12" />
           </div>
 
-          {/* Stat cards */}
-          {(!hookLoading || !pesananLoading) && (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatCard icon={Package} label="Total Produk" value={stats?.totalProduk ?? 0} actionLabel="Kelola" />
-              <StatCard icon={ShoppingCart} label="Total Pesanan" value={displayTotalPesanan} actionLabel="Kelola" />
-              <StatCard icon={Users} label="Total Pelanggan" value={stats?.totalPelanggan ?? 0} actionLabel="Kelola" />
-              <StatCard icon={GraduationCap} label="Pesanan Pending" value={displayPesananPending} />
-            </div>
-          )}
+          {/* Stat cards — angka diambil langsung dari API */}
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+            <StatCard
+              icon={Package}
+              label="Total Produk"
+              value={stats?.totalProduk ?? 0}
+              loading={loading}
+              actionLabel="Kelola"
+              onAction={() => navigate("/dashboard/admin/produk/daftar")}
+            />
+            <StatCard
+              icon={ShoppingCart}
+              label="Total Pesanan"
+              value={stats?.totalPesanan ?? 0}
+              loading={loading}
+              actionLabel="Kelola"
+              onAction={() => navigate("/dashboard/admin/pesanan")}
+            />
+            <StatCard
+              icon={Users}
+              label="Total Pelanggan"
+              value={stats?.totalPelanggan ?? 0}
+              loading={loading}
+            />
+            <StatCard
+              icon={Clock}
+              label="Pesanan Pending"
+              value={stats?.pesananPending ?? 0}
+              loading={loading}
+              hint="Belum dibayar"
+            />
+            <StatCard
+              icon={Banknote}
+              label="Pendapatan Bulan Ini"
+              value={stats?.totalPendapatan ?? 0}
+              loading={loading}
+              format={rupiah}
+              hint={
+                salesSummary
+                  ? `${salesSummary.paidOrders} pesanan lunas`
+                  : salesPeriod
+                    ? `Periode ${salesPeriod.startDate} s/d ${salesPeriod.endDate}`
+                    : undefined
+              }
+            />
+          </div>
 
-          {/* Tabel Pesanan Masuk (Baru Ditambahkan) */}
+          {/* Tabel Pesanan Masuk */}
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
               <h2 className="text-base font-extrabold text-[#1B2A6B]">Pesanan Masuk Terbaru</h2>
+              <button
+                onClick={() => navigate("/dashboard/admin/pesanan")}
+                className="flex items-center gap-1 text-xs font-bold text-[#2E9DF7] hover:text-[#1B2A6B]"
+              >
+                Lihat Semua
+                <ArrowRight className="h-3 w-3" />
+              </button>
             </div>
-            
+
             <div className="overflow-x-auto">
-              {pesananLoading ? (
+              {loading ? (
                 <div className="p-10 text-center text-gray-500 text-sm">Memuat data pesanan...</div>
-              ) : pesananError ? (
-                <div className="p-10 text-center text-red-500 text-sm">{pesananError}</div>
-              ) : pesananList.length === 0 ? (
+              ) : error ? (
+                <div className="p-10 text-center text-red-500 text-sm">{error}</div>
+              ) : pesanan.length === 0 ? (
                 <div className="p-10 text-center text-gray-500 text-sm">Belum ada pesanan yang masuk.</div>
               ) : (
                 <table className="w-full text-left border-collapse">
@@ -130,21 +163,21 @@ export default function DashboardMain() {
                     </tr>
                   </thead>
                   <tbody className="text-sm divide-y divide-gray-100">
-                    {pesananList.slice(0, 5).map((pesanan) => ( // Tampilkan 5 terbaru saja
-                      <tr key={pesanan.id} className="hover:bg-blue-50/30 transition-colors">
-                        <td className="p-4 font-extrabold text-[#1B2A6B]">#{pesanan.id}</td>
+                    {pesanan.slice(0, 5).map((item) => (
+                      <tr key={item.id} className="hover:bg-blue-50/30 transition-colors">
+                        <td className="p-4 font-extrabold text-[#1B2A6B]">#{item.id}</td>
                         <td className="p-4">
-                          <p className="font-bold text-gray-800">{pesanan.namaUser}</p>
+                          <p className="font-bold text-gray-800">{item.namaUser}</p>
                         </td>
-                        <td className="p-4 font-bold text-gray-700">Rp {pesanan.totalHarga.toLocaleString("id-ID")}</td>
-                        <td className="p-4">{getPaymentBadge(pesanan.paymentStatus)}</td>
+                        <td className="p-4 font-bold text-gray-700">{rupiah(item.totalHarga)}</td>
+                        <td className="p-4">{getPaymentBadge(item.paymentStatus)}</td>
                         <td className="p-4">
                           <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded">
-                            {pesanan.statusPengerjaan}
+                            {item.statusPengerjaan}
                           </span>
                         </td>
                         <td className="p-4 text-xs text-gray-500">
-                          {new Date(pesanan.createdAt).toLocaleDateString("id-ID", { day: 'numeric', month: 'short' })}
+                          {new Date(item.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}
                         </td>
                       </tr>
                     ))}
@@ -165,25 +198,25 @@ export default function DashboardMain() {
                   icon={Package}
                   title="Manajemen Produk"
                   description="Tambah produk atau import Excel"
-                  to="/admin/dashboard/produk/daftar"
+                  to="/dashboard/admin/produk/daftar"
                 />
                 <QuickActionCard
                   icon={Tags}
                   title="Kategori Produk"
                   description="Kelola kategori katalog"
-                  to="/admin/dashboard/produk/kategori"
+                  to="/dashboard/admin/produk/kategori"
                 />
                 <QuickActionCard
                   icon={ShoppingCart}
                   title="Pesanan"
                   description="Pantau dan proses pesanan masuk"
-                  to="/admin/dashboard/pesanan"
+                  to="/dashboard/admin/pesanan"
                 />
                 <QuickActionCard
                   icon={Users}
                   title="Pelanggan"
                   description="Kelola data pelanggan"
-                  to="/admin/dashboard/pelanggan"
+                  to="/dashboard/admin/pelanggan"
                 />
               </div>
             </div>

@@ -6,22 +6,24 @@ interface AnimatedCounterProps {
   value: number;
   suffix?: string;
   label: string;
+  /** Selama data API dimuat, tampilkan skeleton alih-alih angka nol. */
+  loading?: boolean;
 }
 
-export default function AnimatedCounter({ value, suffix = "", label }: AnimatedCounterProps) {
+export default function AnimatedCounter({ value, suffix = "", label, loading = false }: AnimatedCounterProps) {
   const ref = useRef<HTMLSpanElement>(null);
   const isInView = useInView(ref, { once: true });
   const [display, setDisplay] = useState(0);
 
   useEffect(() => {
-    if (!isInView) return;
+    if (!isInView || loading) return;
     const controls = animate(0, value, {
       duration: 1.4,
       ease: "easeOut",
       onUpdate: (v) => setDisplay(Math.round(v)),
     });
     return () => controls.stop();
-  }, [isInView, value]);
+  }, [isInView, value, loading]);
 
   return (
     <motion.div
@@ -30,9 +32,13 @@ export default function AnimatedCounter({ value, suffix = "", label }: AnimatedC
       viewport={{ once: true }}
       className="text-center"
     >
-      <span ref={ref} className="text-4xl font-bold text-[#1B2A6B]">
-        {display}{suffix}
-      </span>
+      {loading ? (
+        <div className="mx-auto h-10 w-20 animate-pulse rounded-lg bg-gray-200" />
+      ) : (
+        <span ref={ref} className="text-4xl font-bold text-[#1B2A6B]">
+          {display}{suffix}
+        </span>
+      )}
       <p className="mt-1 text-sm text-gray-500">{label}</p>
     </motion.div>
   );
