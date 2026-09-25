@@ -1,6 +1,7 @@
- // src/components/ShoppingProductCard.tsx
+// src/components/ShoppingProductCard.tsx
 import { motion } from "framer-motion";
 import type { Produk } from "../models/Produk";
+import { getPricingMode, pricingRateSuffix } from "../utils/pricing";
 
 interface ShoppingProductCardProps {
   produk: Produk;
@@ -37,7 +38,6 @@ export default function ShoppingProductCard({
       variants={itemVariants}
       layout
       onClick={onClickCard}
-      // PERBAIKAN: min-w-0 dan w-full memaksa kartu tidak melebihi sel grid
       className="group flex flex-col bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer w-full min-w-0"
     >
       {/* Gambar Produk */}
@@ -64,16 +64,15 @@ export default function ShoppingProductCard({
             {produk.nama}
           </h3>
           <p className="font-black text-[#2E9DF7] mt-1 md:mt-1.5 text-sm md:text-base">
-            Rp {(produk.harga ?? 0).toLocaleString("id-ID")}
+            Rp {(produk.harga ?? 0).toLocaleString("id-ID")}{pricingRateSuffix(getPricingMode(produk))}
           </p>
         </div>
 
-        {/* Action Buttons (Tombol Qty & Tambah) */}
-        {/* PERBAIKAN: flex-col di HP agar bersusun ke bawah, sm:flex-row di layar besar */}
-        <div className="flex flex-col sm:flex-row items-center gap-2 mt-2 w-full shrink-0">
+        {/* Action Buttons (Vertikal / Stacking) */}
+        <div className="flex flex-col gap-2 mt-auto pt-2 w-full">
           
           {/* Kontrol Kuantitas */}
-          <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-xl p-1 w-full sm:w-[90px] shrink-0">
+          <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-xl p-1 w-full shrink-0 h-9">
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -83,7 +82,7 @@ export default function ShoppingProductCard({
             >
               -
             </button>
-            <span className="text-xs font-bold text-[#1B2A6B] w-6 text-center">{qty}</span>
+            <span className="text-xs font-bold text-[#1B2A6B] text-center">{qty}</span>
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -101,7 +100,7 @@ export default function ShoppingProductCard({
               e.stopPropagation();
               onAddToCart();
             }}
-            className="w-full bg-[#1B2A6B] text-white text-[11px] md:text-xs font-bold py-2 md:py-2.5 px-3 rounded-xl hover:bg-[#111A42] transition-colors shadow-sm flex-1 whitespace-nowrap"
+            className="w-full bg-[#1B2A6B] text-white text-[11px] md:text-xs font-bold py-2.5 px-2 rounded-xl hover:bg-[#111A42] transition-colors shadow-sm flex items-center justify-center"
           >
             Tambah
           </button>

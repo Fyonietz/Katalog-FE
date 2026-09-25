@@ -3,10 +3,23 @@ const API_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5283";
 
 export interface PesananDetail {
   id: number;
+  idPesanan?: number;
   idProduct: number;
   namaProduct: string;
+  idUkuranProduk?: number | null;
+  namaUkuran?: string | null;
+  ukuranCustom?: string | null;
   qty: number;
+  /** Rate snapshot dari server: per unit / per m² / per meter. */
   hargaSatuan: number;
+  pricingMode?: string | null;
+  widthMeters?: number | null;
+  heightMeters?: number | null;
+  lengthMeters?: number | null;
+  dimensionUnit?: string | null;
+  areaM2?: number | null;
+  /** Subtotal snapshot baris; null untuk pesanan lama sebelum migrasi. */
+  subtotal?: number | null;
   notes?: string;
   desainFilePath?: string;
   desainText?: string;

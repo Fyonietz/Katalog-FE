@@ -1,6 +1,7 @@
 // src/pages/Admin/PesananAdminPage.tsx
 import { useEffect, useState } from "react";
 import { getAllPesanan, updateStatusPengerjaan, type PesananResponse } from "../../services/pesananService";
+import { detailRateLabel, detailSubtotal, formatDetailDimensions } from "../../utils/pricing";
 import { X, MapPin, Package, DownloadCloud, Eye } from "lucide-react"; 
 
 interface StatusPengerjaan {
@@ -283,16 +284,34 @@ export default function PesananAdminPage() {
                       <div key={i} className="p-5 border border-gray-200 rounded-2xl bg-white shadow-sm hover:border-blue-300 transition-colors space-y-4">
                         
                         {/* Judul Item */}
-                        <div className="flex items-center gap-3">
-                          <span className="bg-[#1B2A6B] text-white px-2.5 py-1 rounded-lg text-[10px] font-black">
-                            {item.qty}x
-                          </span>
-                          <span className="font-extrabold text-[#1B2A6B] text-sm">{item.namaProduct}</span>
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <span className="bg-[#1B2A6B] text-white px-2.5 py-1 rounded-lg text-[10px] font-black">
+                              {item.qty}x
+                            </span>
+                            <span className="font-extrabold text-[#1B2A6B] text-sm">{item.namaProduct}</span>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className="text-[10px] text-gray-400 font-bold">{detailRateLabel(item)}</p>
+                            <p className="text-xs font-black text-[#2E9DF7]">Rp {detailSubtotal(item).toLocaleString("id-ID")}</p>
+                          </div>
                         </div>
                         
                         {/* Box Catatan/Spesifikasi */}
-                        {(item.ukuranCustom || item.notes || item.desainText) && (
+                        {(formatDetailDimensions(item) || item.ukuranCustom || item.notes || item.desainText) && (
                           <div className="bg-gray-50 rounded-xl p-3.5 grid grid-cols-1 sm:grid-cols-2 gap-3 border border-gray-100 text-xs">
+                            {formatDetailDimensions(item) && (
+                              <div>
+                                <span className="block text-[10px] text-gray-400 font-bold uppercase tracking-wide mb-1">Dimensi</span>
+                                <span className="font-medium text-gray-700">{formatDetailDimensions(item)}</span>
+                              </div>
+                            )}
+                            {item.namaUkuran && (
+                              <div>
+                                <span className="block text-[10px] text-gray-400 font-bold uppercase tracking-wide mb-1">Varian</span>
+                                <span className="font-medium text-gray-700">{item.namaUkuran}</span>
+                              </div>
+                            )}
                             {item.ukuranCustom && (
                               <div>
                                 <span className="block text-[10px] text-gray-400 font-bold uppercase tracking-wide mb-1">Ukuran</span>

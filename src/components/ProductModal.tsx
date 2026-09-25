@@ -1,8 +1,20 @@
 // src/components/ProductModal.tsx
 import { useState, useEffect } from "react";
 import { Info, X } from "lucide-react";
-import type { Produk } from "../models/Produk";
+import type { Produk, UkuranProduk } from "../models/Produk";
 import { addToCart } from "../services/cartService";
+import { getUkuranProduk } from "../services/produkService";
+import { showModal } from "../lib/showModal";
+import {
+  PRICING_MODE_LABELS,
+  computeSubtotal,
+  dimensionUnitLabel,
+  getDimensionUnit,
+  getPricingMode,
+  pricingRateSuffix,
+  resolveRate,
+  usesDimensions,
+} from "../utils/pricing";
 
 interface ProductModalProps {
   produk: Produk | null;
@@ -24,16 +36,40 @@ export default function ProductModal({
   const [ukuranCustom, setUkuranCustom] = useState("");
   const [notes, setNotes] = useState("");
   const [desainText, setDesainText] = useState("");
+  const [ukuranList, setUkuranList] = useState<UkuranProduk[]>([]);
+  const [selectedUkuranId, setSelectedUkuranId] = useState<number | "">("");
+  const [width, setWidth] = useState("");
+  const [height, setHeight] = useState("");
+  const [length, setLength] = useState("");
 
   useEffect(() => {
-    if (isOpen) {
-      setUkuranCustom("");
-      setNotes("");
-      setDesainText("");
+    if (!isOpen) return;
+    setUkuranCustom("");
+    setNotes("");
+    setDesainText("");
+    setWidth("");
+    setHeight("");
+    setLength("");
+    setUkuranList([]);
+    setSelectedUkuranId("");
+
+    // Varian (`Ukuran_Produk`) hanya dipakai untuk product non-dimensi (Fixed).
+    if (produk && !usesDimensions(produk)) {
+      getUkuranProduk(produk.id).then((list) => {
+        setUkuranList(list);
+        if (list.length > 0) setSelectedUkuranId(list[0].id);
+      });
     }
-  }, [isOpen]);
+  }, [isOpen, produk]);
 
   if (!isOpen || !produk) return null;
+
+  const mode = getPricingMode(produk);
+  const unit = getDimensionUnit(produk);
+  const unitLabel = dimensionUnitLabel(unit);
+  const needsDimension = usesDimensions(produk);
+  const selectedUkuran = ukuranList.find((u) => u.id === selectedUkuranId) ?? null;
+  const rate = resolveRate(produk, selectedUkuran);
 
   const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "";
   const imageUrl = produk.imagePath
@@ -42,9 +78,46 @@ export default function ProductModal({
       : `${apiBaseUrl}${produk.imagePath}`
     : "https://via.placeholder.com/300";
 
+  const dimensionValid =
+    mode === "PerArea"
+      ? Number(width) > 0 && Number(height) > 0
+      : mode === "PerLength"
+        ? Number(length) > 0
+        : true;
+
+  const estimate = computeSubtotal({
+    pricingMode: mode,
+    dimensionUnit: unit,
+    rate,
+    qty,
+    width: Number(width) || 0,
+    height: Number(height) || 0,
+    length: Number(length) || 0,
+  });
+
   const handleAddWithCustomization = () => {
-    // Parameter terakhir (file desain) kita abaikan/tidak dikirim ke cartService
-    addToCart(produk, qty, undefined, ukuranCustom, notes, desainText);
+    if (!dimensionValid) {
+      showModal(
+        mode === "PerArea"
+          ? `Panjang dan tinggi (${unitLabel}) wajib diisi dan lebih dari 0.`
+          : `Panjang (${unitLabel}) wajib diisi dan lebih dari 0.`,
+        { variant: "warning" }
+      );
+      return;
+    }
+
+    // Dimensi hanya dikirim untuk mode yang memakainya — server menolak
+    // width/height/length yang tidak relevan (400).
+    addToCart(produk, qty, {
+      idUkuranProduk: selectedUkuran?.id,
+      ukuran: selectedUkuran,
+      ukuranCustom: ukuranCustom.trim() || undefined,
+      width: mode === "PerArea" ? Number(width) : undefined,
+      height: mode === "PerArea" ? Number(height) : undefined,
+      length: mode === "PerLength" ? Number(length) : undefined,
+      notes: notes.trim() || undefined,
+      desainText: desainText.trim() || undefined,
+    });
     onAddToCart();
     onClose();
   };
@@ -65,7 +138,12 @@ export default function ProductModal({
           
           <div>
             <h2 className="text-lg font-extrabold text-[#1B2A6B]">{produk.nama}</h2>
-            <p className="text-sm font-bold text-[#2E9DF7] mt-1">Rp {(produk.harga ?? 0).toLocaleString("id-ID")}</p>
+            <p className="text-sm font-bold text-[#2E9DF7] mt-1">
+              Rp {rate.toLocaleString("id-ID")}{pricingRateSuffix(mode)}
+            </p>
+            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mt-0.5">
+              {PRICING_MODE_LABELS[mode]}
+            </p>
             <p className="text-xs text-gray-500 mt-2 leading-relaxed">{produk.deskripsi}</p>
           </div>
 
@@ -73,17 +151,83 @@ export default function ProductModal({
 
           <div className="space-y-3">
             <h4 className="text-xs font-extrabold text-[#1B2A6B] uppercase tracking-wider">Form Kustomisasi Pesanan</h4>
-            
-            <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">Ukuran Custom (Opsional)</label>
-              <input
-                type="text"
-                value={ukuranCustom}
-                onChange={(e) => setUkuranCustom(e.target.value)}
-                placeholder="Contoh: A3, 2x3 meter..."
-                className="w-full p-2.5 border rounded-xl text-xs outline-none focus:ring-2 focus:ring-[#2E9DF7]"
-              />
-            </div>
+
+            {mode === "PerArea" && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  {/* Field backend tetap `width`, tapi istilah yang dipakai tukang
+                      cetak untuk spanduk/banner adalah panjang x tinggi. */}
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Panjang ({unitLabel})</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={width}
+                    onChange={(e) => setWidth(e.target.value)}
+                    placeholder="Contoh: 3"
+                    className="w-full p-2.5 border rounded-xl text-xs outline-none focus:ring-2 focus:ring-[#2E9DF7]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Tinggi ({unitLabel})</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={height}
+                    onChange={(e) => setHeight(e.target.value)}
+                    placeholder="Contoh: 1"
+                    className="w-full p-2.5 border rounded-xl text-xs outline-none focus:ring-2 focus:ring-[#2E9DF7]"
+                  />
+                </div>
+              </div>
+            )}
+
+            {mode === "PerLength" && (
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Panjang ({unitLabel})</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={length}
+                  onChange={(e) => setLength(e.target.value)}
+                  placeholder="Contoh: 5"
+                  className="w-full p-2.5 border rounded-xl text-xs outline-none focus:ring-2 focus:ring-[#2E9DF7]"
+                />
+              </div>
+            )}
+
+            {!needsDimension && ukuranList.length > 0 && (
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Pilih Ukuran</label>
+                <select
+                  value={selectedUkuranId}
+                  onChange={(e) => setSelectedUkuranId(e.target.value === "" ? "" : Number(e.target.value))}
+                  className="w-full p-2.5 border rounded-xl text-xs outline-none focus:ring-2 focus:ring-[#2E9DF7] bg-white"
+                >
+                  <option value="">Tanpa varian</option>
+                  {ukuranList.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.nama} — Rp{resolveRate(produk, u).toLocaleString("id-ID")}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {!(ukuranList.length > 0) && (
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Ukuran Custom (Opsional)</label>
+                <input
+                  type="text"
+                  value={ukuranCustom}
+                  onChange={(e) => setUkuranCustom(e.target.value)}
+                  placeholder="Contoh: A3, 2x3 meter..."
+                  className="w-full p-2.5 border rounded-xl text-xs outline-none focus:ring-2 focus:ring-[#2E9DF7]"
+                />
+              </div>
+            )}
 
             <div>
               <label className="block text-xs font-bold text-gray-700 mb-1">Catatan Tambahan / Finishing (Opsional)</label>
@@ -131,6 +275,12 @@ export default function ProductModal({
               >+</button>
             </div>
           </div>
+
+          <div className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5 flex items-center justify-between">
+            <span className="text-[11px] font-bold text-gray-500">Estimasi Harga</span>
+            <span className="text-sm font-black text-[#2E9DF7]">Rp {estimate.toLocaleString("id-ID")}</span>
+          </div>
+          <p className="text-[10px] text-gray-400 -mt-2">Harga final dihitung ulang oleh server saat checkout.</p>
         </div>
 
         <div className="p-4 border-t bg-gray-50 flex justify-end gap-2 shrink-0">

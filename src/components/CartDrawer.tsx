@@ -2,6 +2,7 @@
 import { useNavigate } from "react-router-dom";
 import { X } from "lucide-react";
 import { showModal } from "../lib/showModal";
+import { estimateItemSubtotal, getDimensionUnit, getPricingMode, pricingRateSuffix, resolveRate } from "../utils/pricing";
 
 export default function CartDrawer({
   open,
@@ -86,8 +87,16 @@ export default function CartDrawer({
                           {item.produk.nama}
                         </h3>
                         <p className="text-xs text-gray-500 mt-0.5">
-                          Rp {(item.produk.harga ?? 0).toLocaleString("id-ID")}
+                          Rp {resolveRate(item.produk, item.ukuran).toLocaleString("id-ID")}{pricingRateSuffix(getPricingMode(item.produk))}
                         </p>
+                        {((getPricingMode(item.produk) === "PerArea" && item.width && item.height) ||
+                          (getPricingMode(item.produk) === "PerLength" && item.length)) && (
+                          <p className="text-[10px] text-gray-400 mt-0.5">
+                            {getPricingMode(item.produk) === "PerArea"
+                              ? `${item.width} x ${item.height} ${getDimensionUnit(item.produk) === "centimeter" ? "cm" : "meter"}`
+                              : `${item.length} ${getDimensionUnit(item.produk) === "centimeter" ? "cm" : "meter"}`}
+                          </p>
+                        )}
                       </div>
                       <button 
                         onClick={() => onRemove(item.produk.id)}
@@ -101,7 +110,7 @@ export default function CartDrawer({
 
                     <div className="flex items-center justify-between mt-3">
                       <span className="text-xs font-bold text-[#2E9DF7]">
-                        Subtotal: Rp {((item.produk.harga ?? 0) * item.qty).toLocaleString("id-ID")}
+                        Subtotal: Rp {estimateItemSubtotal(item).toLocaleString("id-ID")}
                       </span>
                       <div className="flex items-center gap-2 bg-gray-50 border rounded-lg p-1">
                         <button 

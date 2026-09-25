@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { getPesananUser, type PesananResponse } from "../../services/pesananService";
+import { detailSubtotal, formatDetailDimensions } from "../../utils/pricing";
 
 export default function RiwayatPage() {
   const [historyList, setHistoryList] = useState<PesananResponse[]>([]);
@@ -133,12 +134,14 @@ export default function RiwayatPage() {
                               {item.qty}x {item.namaProduct}
                             </p>
                             <p className="text-[10px] font-bold text-[#2E9DF7]">
-                              Rp {(item.hargaSatuan * item.qty).toLocaleString("id-ID")}
+                              Rp {detailSubtotal(item).toLocaleString("id-ID")}
                             </p>
                           </div>
 
-                          {(item.ukuranCustom || item.notes || item.desainText) && (
+                          {(formatDetailDimensions(item) || item.ukuranCustom || item.notes || item.desainText) && (
                             <div className="space-y-0.5 text-[10px] text-gray-500 font-medium pb-1 border-b border-gray-50">
+                              {formatDetailDimensions(item) && <p>• Dimensi: {formatDetailDimensions(item)}</p>}
+                              {item.namaUkuran && <p>• Varian: {item.namaUkuran}</p>}
                               {item.ukuranCustom && <p>• Ukuran: {item.ukuranCustom}</p>}
                               {item.notes && <p>• Catatan: {item.notes}</p>}
                               {item.desainText && <p>• Teks: {item.desainText}</p>}

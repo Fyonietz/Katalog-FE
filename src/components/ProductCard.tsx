@@ -1,6 +1,7 @@
 // components/ProductCard.tsx
 import { motion } from "framer-motion";
 import type { Produk } from "../models/Produk";
+import { getPricingMode, pricingRateSuffix } from "../utils/pricing";
 
 interface ProductCardProps {
   produk: Produk;
@@ -53,7 +54,7 @@ export default function ProductCard({ produk, onBeli }: ProductCardProps) {
         </h3>
 
         <p className="mt-1.5 text-xs md:text-sm font-bold text-[#1B2A6B]">
-          Rp{hargaSatuan.toLocaleString("id-ID")}
+          Rp{hargaSatuan.toLocaleString("id-ID")}{pricingRateSuffix(getPricingMode(produk))}
         </p>
 
         <div className="mt-auto pt-4">

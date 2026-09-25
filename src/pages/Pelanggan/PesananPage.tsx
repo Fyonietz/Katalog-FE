@@ -4,6 +4,8 @@ import { Link } from "react-router-dom";
 import { getPesananUser, deletePesanan, type PesananResponse } from "../../services/pesananService";
 import { createPaymentSnap, checkPaymentStatus } from "../../services/paymentService";
 import { showModal, showConfirm } from "../../lib/showModal";
+import type { DimensionUnit } from "../../models/Produk";
+import { detailRateLabel, detailSubtotal, formatDetailDimensions, fromMeters } from "../../utils/pricing";
 
 declare global {
   interface Window {
@@ -131,7 +133,23 @@ export default function PesananPage() {
         if (item.ukuranCustom) form.append(`items[${index}].ukuranCustom`, item.ukuranCustom);
         if (item.notes) form.append(`items[${index}].notes`, item.notes);
         if (item.desainText) form.append(`items[${index}].desainText`, item.desainText);
-        
+
+        // Response server menyimpan dimensi ternormalisasi (meter); kembalikan
+        // ke satuan product sebelum dikirim ulang agar harga tetap sama.
+        const unit: DimensionUnit = item.dimensionUnit === "centimeter" ? "centimeter" : "meter";
+        const toProductUnit = (meters?: number | null) =>
+          meters === null || meters === undefined ? undefined : Number(fromMeters(Number(meters), unit).toFixed(2));
+        if (item.pricingMode === "PerArea") {
+          const width = toProductUnit(item.widthMeters);
+          const height = toProductUnit(item.heightMeters);
+          if (width) form.append(`items[${index}].width`, String(width));
+          if (height) form.append(`items[${index}].height`, String(height));
+        }
+        if (item.pricingMode === "PerLength") {
+          const length = toProductUnit(item.lengthMeters);
+          if (length) form.append(`items[${index}].length`, String(length));
+        }
+
         form.append(`items[${index}].desain`, file);
       });
 
@@ -248,14 +266,22 @@ export default function PesananPage() {
 
                       return (
                         <div key={item.id} className="bg-white/70 p-3.5 rounded-xl border border-white/80 shadow-sm space-y-2 backdrop-blur-sm">
-                          <div className="flex justify-between items-center">
+                          <div className="flex justify-between items-center gap-3">
                             <p className="text-xs font-extrabold text-[#1B2A6B]">
                               {item.qty}x {item.namaProduct}
                             </p>
+                            <p className="text-[10px] font-bold text-[#2E9DF7] whitespace-nowrap">
+                              Rp {detailSubtotal(item).toLocaleString("id-ID")}
+                            </p>
                           </div>
 
-                          {(item.ukuranCustom || item.notes || item.desainText) && (
+                          <p className="text-[10px] text-gray-400 font-semibold">
+                            {detailRateLabel(item)}{item.namaUkuran ? ` • ${item.namaUkuran}` : ""}
+                          </p>
+
+                          {(formatDetailDimensions(item) || item.ukuranCustom || item.notes || item.desainText) && (
                             <div className="space-y-0.5 text-[10px] text-gray-500 font-medium">
+                              {formatDetailDimensions(item) && <p>• Dimensi: {formatDetailDimensions(item)}</p>}
                               {item.ukuranCustom && <p>• Ukuran: {item.ukuranCustom}</p>}
                               {item.notes && <p>• Catatan: {item.notes}</p>}
                               {item.desainText && <p>• Teks: {item.desainText}</p>}

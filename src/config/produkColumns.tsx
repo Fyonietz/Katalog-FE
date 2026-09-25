@@ -1,6 +1,7 @@
 // src/config/produkColumns.tsx
 import type { Produk } from "../models/Produk";
 import { getImageUrl } from "../utils/getImageUrl";
+import { getPricingMode, pricingRateSuffix, PRICING_MODE_LABELS } from "../utils/pricing";
 
 export const produkColumns = [
   {
@@ -44,8 +45,14 @@ export const produkColumns = [
   {
     header: "Harga",
     accessor: (row: Produk) => {
-      const harga = typeof row.harga === "number" ? row.harga : parseFloat(row.harga || "0") || 0;
-      return <span className="font-bold text-gray-700 text-sm">Rp{harga.toLocaleString("id-ID")}</span>;
+      const harga = typeof row.harga === "number" ? row.harga : parseFloat(String(row.harga ?? "0")) || 0;
+      const mode = getPricingMode(row);
+      return (
+        <div>
+          <span className="font-bold text-gray-700 text-sm">Rp{harga.toLocaleString("id-ID")}{pricingRateSuffix(mode)}</span>
+          <p className="text-[10px] text-gray-400 font-semibold">{PRICING_MODE_LABELS[mode]}</p>
+        </div>
+      );
     },
   },
   {

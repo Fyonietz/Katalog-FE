@@ -1,6 +1,7 @@
 // src/services/cartService.ts
-import type { CartItem } from "../models/CartItem";
+import type { AddToCartOptions, CartItem } from "../models/CartItem";
 import type { Produk } from "../models/Produk";
+import { estimateItemSubtotal } from "../utils/pricing";
 
 const CART_KEY = "cart";
 
@@ -16,33 +17,38 @@ export function getCart(): CartItem[] {
 
 function saveCart(cart: CartItem[]): void {
   // Catatan: JSON.stringify akan menghilangkan objek File.
-  // Idealnya file desain langsung di-upload ke server temp, 
+  // Idealnya file desain langsung di-upload ke server temp,
   // namun untuk implementasi ini kita simpan referensinya jika ada.
   localStorage.setItem(CART_KEY, JSON.stringify(cart));
 }
 
+/** Salin hanya field yang benar-benar dikirim, agar nilai lama tidak terhapus. */
+function mergeOptions(target: CartItem, options: AddToCartOptions): void {
+  if (options.idUkuranProduk !== undefined) target.idUkuranProduk = options.idUkuranProduk;
+  if (options.ukuran !== undefined) target.ukuran = options.ukuran;
+  if (options.ukuranCustom !== undefined) target.ukuranCustom = options.ukuranCustom;
+  if (options.width !== undefined) target.width = options.width;
+  if (options.height !== undefined) target.height = options.height;
+  if (options.length !== undefined) target.length = options.length;
+  if (options.notes !== undefined) target.notes = options.notes;
+  if (options.desainText !== undefined) target.desainText = options.desainText;
+  if (options.desainFile !== undefined) target.desainFile = options.desainFile;
+}
+
 // Update fungsi ini untuk menerima parameter kustomisasi lengkap
 export function addToCart(
-  produk: Produk, 
-  qty: number, 
-  idUkuranProduk?: number,
-  ukuranCustom?: string,
-  notes?: string, 
-  desainText?: string, 
-  desainFile?: File | null
+  produk: Produk,
+  qty: number,
+  options: AddToCartOptions = {}
 ): CartItem[] {
   const cart = getCart();
   const existing = cart.find((item) => item.produk.id === produk.id);
 
   if (existing) {
     existing.qty += qty;
-    if (idUkuranProduk) existing.idUkuranProduk = idUkuranProduk;
-    if (ukuranCustom !== undefined) existing.ukuranCustom = ukuranCustom;
-    if (notes !== undefined) existing.notes = notes;
-    if (desainText !== undefined) existing.desainText = desainText;
-    if (desainFile !== undefined) existing.desainFile = desainFile;
+    mergeOptions(existing, options);
   } else {
-    cart.push({ produk, qty, idUkuranProduk, ukuranCustom, notes, desainText, desainFile });
+    cart.push({ produk, qty, ...options });
   }
 
   saveCart(cart);
@@ -68,8 +74,13 @@ export function removeFromCart(produkId: number): CartItem[] {
   return cart;
 }
 
+/** Estimasi total keranjang; server tetap menghitung harga final saat checkout. */
 export function getCartTotal(cart: CartItem[]): number {
-  return cart.reduce((total, item) => total + item.produk.harga * item.qty, 0);
+  return cart.reduce((total, item) => total + estimateItemSubtotal(item), 0);
+}
+
+export function getCartCount(cart: CartItem[]): number {
+  return cart.reduce((total, item) => total + item.qty, 0);
 }
 
 export function clearCart(): void {

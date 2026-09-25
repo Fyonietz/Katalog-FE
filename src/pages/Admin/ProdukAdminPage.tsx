@@ -6,7 +6,9 @@ import { getProdukList, createProduct, updateProduct, deleteProduct } from "../.
 import { getKategoriList, type KategoriProduct } from "../../services/kategoriService";
 import { getStatusList, type StatusProduct } from "../../services/statusService";
 import { showModal } from "../../lib/showModal";
-import type { Produk } from "../../models/Produk";
+import type { Produk, PricingMode, DimensionUnit } from "../../models/Produk";
+import { PRICING_MODES, DIMENSION_UNITS, PRICING_MODE_LABELS, DEFAULT_PRICING_MODE, DEFAULT_DIMENSION_UNIT } from "../../utils/pricing";
+import Modal from "../../components/ui/Modal"; // <-- TAMBAHKAN IMPORT MODAL
 
 export default function ProdukAdminPage() {
   const [produkList, setProdukList] = useState<Produk[]>([]);
@@ -20,12 +22,18 @@ export default function ProdukAdminPage() {
   const [editingProduk, setEditingProduk] = useState<Produk | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // STATE UNTUK MODAL HAPUS
+  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const [idKategoriProduct, setIdKategoriProduct] = useState<number | string>("");
   const [idStatusProduct, setIdStatusProduct] = useState<number | string>("");
   const [nama, setNama] = useState("");
   const [deskripsi, setDeskripsi] = useState("");
   const [harga, setHarga] = useState("");
   const [backgroundColor, setBackgroundColor] = useState("#FFFFFF");
+  const [pricingMode, setPricingMode] = useState<PricingMode>(DEFAULT_PRICING_MODE);
+  const [dimensionUnit, setDimensionUnit] = useState<DimensionUnit>(DEFAULT_DIMENSION_UNIT);
   const [imageFile, setImageFile] = useState<File | null>(null);
 
   const loadInitialData = async () => {
@@ -59,19 +67,33 @@ export default function ProdukAdminPage() {
     setDeskripsi(produk?.deskripsi || "");
     setHarga(produk?.harga?.toString() || "");
     setBackgroundColor(produk?.backgroundColor || "#FFFFFF");
+    setPricingMode(produk?.pricingMode ?? DEFAULT_PRICING_MODE);
+    setDimensionUnit(produk?.dimensionUnit ?? DEFAULT_DIMENSION_UNIT);
     setIdKategoriProduct(produk?.kategoryProduct?.id || produk?.idKategoriProduct || (kategoriOptions[0]?.id ?? ""));
     setIdStatusProduct(produk?.statusProduct?.id || produk?.idStatusProduct || (statusOptions[0]?.id ?? ""));
     setImageFile(null);
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm("Hapus produk ini?")) return;
+  // TRIGGER UNTUK MEMBUKA MODAL HAPUS
+  const handleDelete = (id: number) => {
+    setDeleteConfirmId(id);
+  };
+
+  // FUNGSI EKSEKUSI HAPUS (DIPANGGIL DARI MODAL)
+  const executeDelete = async () => {
+    if (!deleteConfirmId) return;
+    setIsDeleting(true);
     try {
-      await deleteProduct(id);
+      await deleteProduct(deleteConfirmId);
       showModal("Dihapus!");
       loadInitialData();
-    } catch (e: any) { showModal(e.message); }
+    } catch (e: any) { 
+      showModal(e.message); 
+    } finally {
+      setIsDeleting(false);
+      setDeleteConfirmId(null);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -79,12 +101,13 @@ export default function ProdukAdminPage() {
     setSubmitting(true);
     try {
       if (editingProduk) {
-        await updateProduct(editingProduk.id, { idKategoriProduct: Number(idKategoriProduct), idStatusProduct: Number(idStatusProduct), nama, deskripsi, harga: Number(harga), backgroundColor, imagePath: editingProduk.imagePath });
+        await updateProduct(editingProduk.id, { idKategoriProduct: Number(idKategoriProduct), idStatusProduct: Number(idStatusProduct), nama, deskripsi, harga: Number(harga), pricingMode, dimensionUnit, backgroundColor, imagePath: editingProduk.imagePath });
       } else {
         const fd = new FormData();
         fd.append("IdKategoriProduct", idKategoriProduct.toString());
         fd.append("IdStatusProduct", idStatusProduct.toString());
         fd.append("Nama", nama); fd.append("Deskripsi", deskripsi); fd.append("Harga", harga); fd.append("BackgroundColor", backgroundColor);
+        fd.append("PricingMode", pricingMode); fd.append("DimensionUnit", dimensionUnit);
         if (imageFile) fd.append("Image", imageFile);
         await createProduct(fd);
       }
@@ -134,7 +157,15 @@ export default function ProdukAdminPage() {
                 <div><label className="block text-xs font-bold mb-1">Kategori</label><select value={idKategoriProduct} onChange={e=>setIdKategoriProduct(e.target.value)} className="w-full border rounded-xl px-3 py-2 text-sm">{kategoriOptions.map(k=><option key={k.id} value={k.id}>{k.nama}</option>)}</select></div>
                 <div><label className="block text-xs font-bold mb-1">Status</label><select value={idStatusProduct} onChange={e=>setIdStatusProduct(e.target.value)} className="w-full border rounded-xl px-3 py-2 text-sm">{statusOptions.map(s=><option key={s.id} value={s.id}>{s.nama}</option>)}</select></div>
               </div>
-              <div><label className="block text-xs font-bold mb-1">Harga</label><input type="number" required value={harga} onChange={e=>setHarga(e.target.value)} className="w-full border rounded-xl px-3 py-2 text-sm" /></div>
+              <div>
+                <label className="block text-xs font-bold mb-1">Harga <span className="font-normal text-gray-400">({PRICING_MODE_LABELS[pricingMode]})</span></label>
+                <input type="number" required value={harga} onChange={e=>setHarga(e.target.value)} className="w-full border rounded-xl px-3 py-2 text-sm" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="block text-xs font-bold mb-1">Mode Harga</label><select value={pricingMode} onChange={e=>setPricingMode(e.target.value as PricingMode)} className="w-full border rounded-xl px-3 py-2 text-sm">{PRICING_MODES.map(m=><option key={m} value={m}>{PRICING_MODE_LABELS[m]}</option>)}</select></div>
+                <div><label className="block text-xs font-bold mb-1">Satuan Dimensi</label><select value={dimensionUnit} onChange={e=>setDimensionUnit(e.target.value as DimensionUnit)} className="w-full border rounded-xl px-3 py-2 text-sm">{DIMENSION_UNITS.map(u=><option key={u} value={u}>{u === "centimeter" ? "centimeter (cm)" : "meter (m)"}</option>)}</select></div>
+              </div>
+              <p className="-mt-2 text-[10px] text-gray-400"><b>PerArea</b> memakai panjang x tinggi (mis. spanduk/banner), <b>PerLength</b> memakai panjang saja (mis. kain). Satuan dimensi hanya berpengaruh untuk kedua mode itu.</p>
               <div><label className="block text-xs font-bold mb-1">Deskripsi</label><textarea value={deskripsi} onChange={e=>setDeskripsi(e.target.value)} className="w-full border rounded-xl px-3 py-2 text-sm" /></div>
               {!editingProduk && <div><label className="block text-xs font-bold mb-1">Gambar</label><input type="file" onChange={e=>setImageFile(e.target.files?.[0]||null)} /></div>}
               <div className="pt-4 flex gap-3"><button type="button" onClick={()=>setIsModalOpen(false)} className="flex-1 border rounded-xl py-2">Batal</button><button type="submit" disabled={submitting} className="flex-1 bg-[#1B2A6B] text-white rounded-xl py-2">Simpan</button></div>
@@ -142,6 +173,20 @@ export default function ProdukAdminPage() {
           </div>
         </div>
       )}
+
+      {/* KOMPONEN MODAL KONFIRMASI HAPUS */}
+      <Modal
+        isOpen={deleteConfirmId !== null}
+        onClose={() => setDeleteConfirmId(null)}
+        title="Konfirmasi Hapus"
+        message="Apakah Anda yakin ingin menghapus produk ini? Tindakan ini tidak dapat dibatalkan."
+        variant="warning"
+        confirmLabel="Hapus Produk"
+        cancelLabel="Batal"
+        onConfirm={executeDelete}
+        danger={true}
+        isProcessing={isDeleting}
+      />
     </div>
   );
 }

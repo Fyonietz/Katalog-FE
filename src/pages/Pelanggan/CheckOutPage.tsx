@@ -6,6 +6,23 @@ import { getAlamatUser, type AlamatGetResponse } from "../../services/alamatServ
 import { createPesanan } from "../../services/pesananService";
 import type { CartItem } from "../../models/CartItem";
 import { showModal } from "../../lib/showModal";
+import {
+  dimensionUnitLabel,
+  estimateItemSubtotal,
+  getDimensionUnit,
+  getPricingMode,
+  pricingRateSuffix,
+  resolveRate,
+} from "../../utils/pricing";
+
+/** Ringkasan dimensi satu baris keranjang, mis. "3 x 1 meter". */
+function formatDims(item: CartItem): string | null {
+  const mode = getPricingMode(item.produk);
+  const unit = dimensionUnitLabel(getDimensionUnit(item.produk));
+  if (mode === "PerArea" && item.width && item.height) return `${item.width} x ${item.height} ${unit}`;
+  if (mode === "PerLength" && item.length) return `${item.length} ${unit}`;
+  return null;
+}
 
 export default function CheckOutPage() {
   const navigate = useNavigate();
@@ -73,6 +90,12 @@ export default function CheckOutPage() {
         if (item.desainText && item.desainText.trim() !== "") {
           form.append(`items[${index}].desainText`, item.desainText);
         }
+        // Dimensi hanya dikirim untuk mode yang memakainya (server menolak
+        // width/height/length yang tidak relevan dengan 400).
+        const mode = getPricingMode(item.produk);
+        if (mode === "PerArea" && item.width) form.append(`items[${index}].width`, String(item.width));
+        if (mode === "PerArea" && item.height) form.append(`items[${index}].height`, String(item.height));
+        if (mode === "PerLength" && item.length) form.append(`items[${index}].length`, String(item.length));
         if (item.desainFile instanceof File) {
           form.append(`items[${index}].desain`, item.desainFile);
         }
@@ -144,15 +167,19 @@ export default function CheckOutPage() {
                       <h3 className="text-sm font-extrabold text-[#1B2A6B] truncate">{item.produk.nama}</h3>
                       
                       <div className="text-[10px] text-gray-500 mt-1 space-y-0.5">
+                        {formatDims(item) && <p>Dimensi: <span className="font-semibold text-gray-700">{formatDims(item)}</span></p>}
+                        {item.ukuran?.nama && <p>Varian: <span className="font-semibold text-gray-700">{item.ukuran.nama}</span></p>}
                         {item.ukuranCustom && <p>Ukuran: <span className="font-semibold text-gray-700">{item.ukuranCustom}</span></p>}
                         {item.notes && <p>Catatan: <span className="font-semibold text-gray-700">{item.notes}</span></p>}
                         {item.desainText && <p>Teks Desain: <span className="font-semibold text-gray-700">{item.desainText}</span></p>}
                       </div>
 
-                      <p className="text-xs font-bold text-gray-500 mt-2">{item.qty} x Rp {(item.produk.harga ?? 0).toLocaleString("id-ID")}</p>
+                      <p className="text-xs font-bold text-gray-500 mt-2">
+                        {item.qty} x Rp {resolveRate(item.produk, item.ukuran).toLocaleString("id-ID")}{pricingRateSuffix(getPricingMode(item.produk))}
+                      </p>
                     </div>
                     <div className="text-sm font-extrabold text-[#1B2A6B]">
-                      Rp {((item.produk.harga ?? 0) * item.qty).toLocaleString("id-ID")}
+                      Rp {estimateItemSubtotal(item).toLocaleString("id-ID")}
                     </div>
                   </div>
 
@@ -184,6 +211,7 @@ export default function CheckOutPage() {
             <span className="text-sm font-extrabold text-[#1B2A6B]">Total</span>
             <span className="text-lg font-extrabold text-[#2E9DF7]">Rp {subTotal.toLocaleString("id-ID")}</span>
           </div>
+          <p className="text-[10px] text-gray-400">Estimasi di atas bisa berbeda sedikit dengan harga final yang dihitung server.</p>
           <button 
             onClick={handleBuatPesanan} 
             disabled={isProcessing || !selectedAlamatId || cartItems.length === 0} 
